@@ -1,0 +1,135 @@
+.lcd {
+  background: #d1d7c4;
+  border: 2px solid #a8aea0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-height: 110px;
+  margin-bottom: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-family: 'Courier New', Courier, monospace;
+  position: relative;
+  overflow: hidden;
+}
+
+.lcdOff {
+  background: #9aa090;
+}
+
+.statusBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 8px;
+  color: #333;
+  margin-bottom: 4px;
+  min-height: 12px;
+}
+
+.shiftIndicator {
+  color: #2f8fd6;
+  font-weight: 700;
+}
+
+.battery {
+  display: flex;
+  gap: 1px;
+}
+
+.batteryBar {
+  width: 3px;
+  height: 8px;
+  background: #333;
+  border-radius: 1px;
+}
+
+.content {
+  min-height: 80px;
+}
+
+.line {
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.lineRight {
+  text-align: right;
+}
+
+.lineSmall {
+  font-size: 10px;
+  color: #444;
+}
+
+.lineLarge {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.homeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.menuItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+}
+
+.menuItemSelected {
+  border-color: #2f8fd6;
+  background: rgba(47, 143, 214, 0.12);
+}
+
+.menuIcon {
+  width: 28px;
+  height: 28px;
+}
+
+.menuLabel {
+  font-size: 7px;
+  text-align: center;
+  color: #222;
+  line-height: 1.1;
+}
+
+.gridPreview {
+  margin-top: 6px;
+  border-top: 1px solid #a8aea0;
+  padding-top: 4px;
+}
+
+.gridRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  font-size: 8px;
+}
+
+.gridCell {
+  text-align: center;
+  padding: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.gridCellHighlight {
+  background: rgba(37, 99, 235, 0.25);
+  border-radius: 2px;
+}
+
+.qrImage {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 6px auto 0;
+  image-rendering: pixelated;
+}

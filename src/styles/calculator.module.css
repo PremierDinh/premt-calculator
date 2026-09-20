@@ -1,0 +1,318 @@
+.page {
+  display: flex;
+  justify-content: center;
+  outline: none;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.page:focus-visible .shell {
+  box-shadow:
+    0 20px 50px rgba(40, 90, 80, 0.22),
+    0 0 0 3px #2f8fd6;
+}
+
+.shell {
+  width: 418px;
+  background: linear-gradient(180deg, #c8e6dc 0%, #b4d9ce 45%, #a8d0c4 100%);
+  border-radius: 28px;
+  padding: 14px 14px 20px;
+  box-shadow:
+    0 22px 48px rgba(40, 70, 65, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  user-select: none;
+  color: #1f2a28;
+}
+
+.brandRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 6px;
+}
+
+.brand {
+  font-size: 11px;
+  font-weight: 700;
+  color: #243330;
+  letter-spacing: 0.6px;
+}
+
+.model {
+  font-size: 9px;
+  color: #4a5c58;
+}
+
+.classwiz {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3b4e4a;
+  letter-spacing: 2px;
+  margin: 6px 0 8px;
+}
+
+.topDeck {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-areas:
+    "on home menu up . pgup ."
+    "set exit left ok right pgdn ."
+    "alpha shift vkey func down cat tools";
+  gap: 2px 4px;
+  margin: 2px 0 8px;
+}
+
+.areaOn { grid-area: on; }
+.areaHome { grid-area: home; }
+.areaMenu { grid-area: menu; }
+.areaUp { grid-area: up; }
+.areaPgUp { grid-area: pgup; }
+.areaSet { grid-area: set; }
+.areaExit { grid-area: exit; }
+.areaLeft { grid-area: left; }
+.areaOk { grid-area: ok; }
+.areaRight { grid-area: right; }
+.areaPgDn { grid-area: pgdn; }
+.areaAlpha { grid-area: alpha; }
+.areaShift { grid-area: shift; }
+.areaVar { grid-area: vkey; }
+.areaFunc { grid-area: func; }
+.areaDown { grid-area: down; }
+.areaCat { grid-area: cat; }
+.areaTools { grid-area: tools; }
+
+.sciBlock {
+  display: block;
+  margin: 2px 0 8px;
+}
+
+.scientificRow,
+.scientificRow2 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px 5px;
+  margin-bottom: 2px;
+}
+
+.glyph {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.glyphWide {
+  width: 28px;
+  height: 20px;
+  display: block;
+}
+
+.formatGlyph {
+  width: 46px;
+  height: 46px;
+  display: block;
+}
+
+.shiftIcon {
+  width: 14px;
+  height: 10px;
+  display: block;
+}
+
+.shiftIconWide {
+  width: 18px;
+  height: 12px;
+  display: block;
+}
+
+.numPad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px 8px;
+  margin-top: 6px;
+}
+
+.keyWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.legendRow {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  min-height: 18px;
+}
+
+.caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-size: 6px;
+  letter-spacing: 0.35px;
+  color: #2c3d39;
+  line-height: 8px;
+  text-transform: uppercase;
+  text-align: center;
+  pointer-events: none;
+}
+
+.legendEmpty {
+  height: 18px;
+}
+
+.shiftStack {
+  display: flex;
+  flex-direction: column;
+  line-height: 5.5px;
+  font-size: 6px;
+  font-weight: 700;
+}
+
+.shiftLabel,
+.alphaLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  margin-top: auto;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 8px;
+  padding-left: 3px;
+  position: relative;
+  z-index: 1;
+}
+
+.shiftLabel { color: #2f8fd6; }
+.alphaLabel { color: #c9a227; }
+
+.leader {
+  width: 4px;
+  height: 4px;
+  border-left: 1.1px solid currentColor;
+  border-bottom: 1.1px solid currentColor;
+  flex-shrink: 0;
+  margin-left: 1px;
+  margin-top: 1px;
+}
+
+.offPill {
+  display: inline-block;
+  background: #2f8fd6;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 4px;
+  font-size: 6px;
+  line-height: 10px;
+}
+
+.key {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 52px;
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #f6f6f6 55%, #ececec 100%);
+  box-shadow:
+    0 3px 0 #9bb8b0,
+    0 4px 8px rgba(40, 70, 65, 0.16),
+    inset 0 1px 0 #fff;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.05s, box-shadow 0.05s;
+}
+
+.key:active,
+.keyPressed {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 #9bb8b0,
+    inset 0 2px 3px rgba(0, 0, 0, 0.08);
+}
+
+.keyShift {
+  background: radial-gradient(circle at 32% 28%, #4fb0f0 0%, #2f8fd6 60%, #1f7cc0 100%);
+  color: #fff;
+  box-shadow:
+    0 3px 0 #186aa6,
+    0 4px 8px rgba(31, 124, 192, 0.35);
+  font-size: 16px;
+}
+
+.keyShiftActive {
+  background: radial-gradient(circle at 32% 28%, #1f7cc0 0%, #166399 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  color: #fff;
+}
+
+.keyGray {
+  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #f2f2f2 100%);
+}
+
+.keyExe {
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.topDeck .key,
+.sciBlock .key {
+  max-width: 46px;
+  font-size: 11px;
+}
+
+.topDeck .keySystem {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.numPad .key {
+  max-width: 56px;
+}
+
+.keySystem {
+  font-size: 13px;
+}
+
+.keyNav {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.keyAlpha {
+  background: radial-gradient(circle at 32% 28%, #f2d56a 0%, #c9a227 58%, #a88620 100%);
+  color: #fff;
+  box-shadow:
+    0 3px 0 #8a6918,
+    0 4px 8px rgba(168, 134, 32, 0.35);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.keyAlphaActive {
+  background: radial-gradient(circle at 32% 28%, #a88620 0%, #8a6918 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  color: #fff;
+}
+
+@media (max-width: 440px) {
+  .shell {
+    width: min(100%, 418px);
+    padding: 12px 10px 16px;
+  }
+
+  .numPad .key {
+    max-width: 52px;
+  }
+}
