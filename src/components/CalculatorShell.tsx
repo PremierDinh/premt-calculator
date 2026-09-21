@@ -19,6 +19,11 @@ export function CalculatorShell() {
   }, [refreshDisplay]);
 
   useEffect(() => {
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    wrapRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!focused) return;
       const mapped = e.key === 'Shift' ? 'SHIFT' : KEYBOARD_MAP[e.key];
@@ -66,7 +71,9 @@ export function CalculatorShell() {
 
         <div className={styles.classwiz}>{t(language, 'classLine')}</div>
 
-        <KeypadGrid />
+        <div className={styles.keypadArea}>
+          <KeypadGrid />
+        </div>
       </div>
     </div>
   );

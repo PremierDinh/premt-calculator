@@ -52,6 +52,10 @@
   margin: 6px 0 8px;
 }
 
+.keypadArea {
+  display: contents;
+}
+
 .topDeck {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -306,13 +310,96 @@
   color: #fff;
 }
 
-@media (max-width: 440px) {
-  .shell {
-    width: min(100%, 418px);
-    padding: 12px 10px 16px;
+@media (max-width: 768px) {
+  .page {
+    width: 100%;
+    max-width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 
+  .page:focus-visible .shell {
+    box-shadow: none;
+  }
+
+  .shell {
+    width: 100%;
+    max-width: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: 0;
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    box-shadow: none;
+  }
+
+  .brandRow,
+  .classwiz {
+    display: none;
+  }
+
+  .topDeck .key,
+  .sciBlock .key,
   .numPad .key {
-    max-width: 52px;
+    max-width: none;
+  }
+
+  .numPad {
+    flex: 1;
+    align-content: end;
+    gap: 6px 6px;
+  }
+
+  .sciBlock {
+    flex-shrink: 0;
+  }
+
+  .topDeck {
+    flex-shrink: 0;
+  }
+
+  .keypadArea {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: flex-end;
+    min-height: 0;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 440px) {
+  .shell {
+    padding:
+      max(4px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+
+  .legendRow {
+    min-height: 14px;
+  }
+
+  .legendEmpty {
+    height: 14px;
+  }
+
+  .caption {
+    font-size: 5px;
+    line-height: 7px;
+  }
+
+  .shiftLabel,
+  .alphaLabel {
+    font-size: 6px;
+    line-height: 7px;
   }
 }
