@@ -1,4 +1,5 @@
 import type { DisplayState, KeyContext, KeyId, ModeResult, StatisticsState } from '../../types';
+import type { CalculatorSettings } from '../../settings';
 import { formatNumber } from '../../format';
 
 const CALC_OPTIONS_1VAR = ['n', 'Σx', 'x̄', 'σx', 'σ', 'minX', 'maxX', 'Med', 'Q1', 'Q3'];
@@ -40,7 +41,7 @@ function median(sorted: number[]): number {
   return percentile(sorted, 0.5);
 }
 
-function compute1Var(data: StatisticsState['data'], calc: string): string {
+function compute1Var(data: StatisticsState['data'], calc: string, settings: CalculatorSettings): string {
   const xs = expandedData(data);
   const n = xs.length;
   if (n === 0) return 'Data ERROR';
@@ -53,20 +54,20 @@ function compute1Var(data: StatisticsState['data'], calc: string): string {
 
   switch (calc) {
     case 'n': return String(n);
-    case 'Σx': return formatNumber(sum, 'norm');
-    case 'x̄': return formatNumber(mean, 'norm');
-    case 'σx': return formatNumber(std, 'norm');
-    case 'σ': return formatNumber(Math.sqrt(variance * n / (n - 1 || 1)), 'norm');
-    case 'minX': return formatNumber(sorted[0], 'norm');
-    case 'maxX': return formatNumber(sorted[n - 1], 'norm');
-    case 'Med': return formatNumber(median(sorted), 'norm');
-    case 'Q1': return formatNumber(percentile(sorted, 0.25), 'norm');
-    case 'Q3': return formatNumber(percentile(sorted, 0.75), 'norm');
+    case 'Σx': return formatNumber(sum, settings);
+    case 'x̄': return formatNumber(mean, settings);
+    case 'σx': return formatNumber(std, settings);
+    case 'σ': return formatNumber(Math.sqrt(variance * n / (n - 1 || 1)), settings);
+    case 'minX': return formatNumber(sorted[0], settings);
+    case 'maxX': return formatNumber(sorted[n - 1], settings);
+    case 'Med': return formatNumber(median(sorted), settings);
+    case 'Q1': return formatNumber(percentile(sorted, 0.25), settings);
+    case 'Q3': return formatNumber(percentile(sorted, 0.75), settings);
     default: return '—';
   }
 }
 
-function compute2Var(data: StatisticsState['data'], calc: string): string {
+function compute2Var(data: StatisticsState['data'], calc: string, settings: CalculatorSettings): string {
   const rows = data.filter((r) => r.y !== undefined);
   const n = rows.reduce((a, r) => a + r.freq, 0);
   if (n === 0) return 'Data ERROR';
@@ -89,14 +90,14 @@ function compute2Var(data: StatisticsState['data'], calc: string): string {
 
   switch (calc) {
     case 'n': return String(n);
-    case 'Σx': return formatNumber(sumX, 'norm');
-    case 'Σy': return formatNumber(sumY, 'norm');
-    case 'x̄': return formatNumber(meanX, 'norm');
-    case 'ȳ': return formatNumber(meanY, 'norm');
-    case 'A': return formatNumber(a, 'norm');
-    case 'B': return formatNumber(b, 'norm');
-    case 'r': return formatNumber(r, 'norm');
-    case 'ŷ': return formatNumber(a + b * meanX, 'norm'); // regression at mean x
+    case 'Σx': return formatNumber(sumX, settings);
+    case 'Σy': return formatNumber(sumY, settings);
+    case 'x̄': return formatNumber(meanX, settings);
+    case 'ȳ': return formatNumber(meanY, settings);
+    case 'A': return formatNumber(a, settings);
+    case 'B': return formatNumber(b, settings);
+    case 'r': return formatNumber(r, settings);
+    case 'ŷ': return formatNumber(a + b * meanX, settings);
     default: return '—';
   }
 }
@@ -255,8 +256,8 @@ export function handleStatisticsKey(
     if (key === 'EXE') {
       const calc = state.calcOptions[state.selectedCalc];
       const resultText = state.dataType === '1-var'
-        ? compute1Var(state.data, calc)
-        : compute2Var(state.data, calc);
+        ? compute1Var(state.data, calc, ctx.settings)
+        : compute2Var(state.data, calc, ctx.settings);
       return {
         state: { ...state, screen: 'result', resultText },
         result: { handled: true },

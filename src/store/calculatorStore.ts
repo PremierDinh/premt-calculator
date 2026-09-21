@@ -6,7 +6,7 @@ import type { Vector } from '../math/vector';
 import type { DisplayState, HistoryEntry, KeyContext, KeyId, ModeId, Overlay, PowerState, VariableName } from '../core/types';
 import { createInitialModeState, getModeDisplay, handleModeKey } from '../core/modes';
 import { applySetting, DEFAULT_SETTINGS, SETTINGS_ITEMS, type CalculatorSettings, type Language } from '../core/settings';
-import { cycleFormat } from '../core/format';
+import { cycleFormat, formatValue } from '../core/format';
 import { applyCatalogItem, getCatalog, getTools } from '../core/catalog';
 import { settingLabel, t } from '../i18n/strings';
 import { insertAtCursor } from '../math/expression';
@@ -310,6 +310,34 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
       set({ settings: { ...state.settings, numberFormat: cycleFormat(state.settings.numberFormat) } });
       get().refreshDisplay();
       return;
+    }
+
+    if (key === 'FRAC' && !state.shiftActive && !state.alphaActive) {
+      const calc = state.modeState.calculate;
+      const editingCalc = state.currentMode === 'calculate' && calc.expression.trim() && !calc.showResult;
+      if (!editingCalc) {
+        const settings = { ...state.settings, fractionOutput: !state.settings.fractionOutput };
+        const updates: Partial<CalculatorStore> = { settings, pressedKey: key, lastInputAt: Date.now() };
+        if (state.currentMode === 'calculate' && calc.showResult && state.lastValue) {
+          updates.modeState = {
+            ...state.modeState,
+            calculate: { ...calc, result: formatValue(state.lastValue, settings) },
+          };
+        }
+        if (state.currentMode === 'complex' && state.modeState.complex.showResult && state.lastValue) {
+          updates.modeState = {
+            ...(updates.modeState ?? state.modeState),
+            complex: {
+              ...state.modeState.complex,
+              result: formatValue(state.lastValue, settings),
+            },
+          };
+        }
+        set(updates);
+        get().refreshDisplay();
+        get().releaseKey();
+        return;
+      }
     }
 
     const ctx = makeContext(state);

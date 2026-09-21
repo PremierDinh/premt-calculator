@@ -1,4 +1,5 @@
 import type { DisplayState, DistFunc, DistType, DistributionState, KeyContext, KeyId, ModeResult } from '../../types';
+import type { CalculatorSettings } from '../../settings';
 import {
   binomialCdf, binomialInv, binomialPdf,
   normalCdf, normalInv, normalPdf,
@@ -38,7 +39,7 @@ export function createDistributionState(): DistributionState {
   };
 }
 
-function computeResult(state: DistributionState): string {
+function computeResult(state: DistributionState, settings: CalculatorSettings): string {
   const labels = labelsFor(state);
   const vals = labels.map((l) => parseFloat(state.params[l] ?? '0'));
   try {
@@ -46,29 +47,29 @@ function computeResult(state: DistributionState): string {
       case 'normal': {
         const [x, mean, std] = vals;
         if (std <= 0) return 'Domain ERROR';
-        if (state.distFunc === 'pd') return formatNumber(normalPdf(x, mean, std), 'norm');
-        if (state.distFunc === 'cd') return formatNumber(normalCdf(x, mean, std), 'norm');
+        if (state.distFunc === 'pd') return formatNumber(normalPdf(x, mean, std), settings);
+        if (state.distFunc === 'cd') return formatNumber(normalCdf(x, mean, std), settings);
         if (x <= 0 || x >= 1) return 'Domain ERROR';
-        return formatNumber(normalInv(x, mean, std), 'norm');
+        return formatNumber(normalInv(x, mean, std), settings);
       }
       case 'binomial': {
         const [x, n, p] = vals;
         const k = Math.round(x);
         const ni = Math.round(n);
         if (p < 0 || p > 1 || ni < 0) return 'Domain ERROR';
-        if (state.distFunc === 'pd') return formatNumber(binomialPdf(k, ni, p), 'norm');
-        if (state.distFunc === 'cd') return formatNumber(binomialCdf(k, ni, p), 'norm');
+        if (state.distFunc === 'pd') return formatNumber(binomialPdf(k, ni, p), settings);
+        if (state.distFunc === 'cd') return formatNumber(binomialCdf(k, ni, p), settings);
         if (x <= 0 || x >= 1) return 'Domain ERROR';
-        return formatNumber(binomialInv(x, ni, p), 'norm');
+        return formatNumber(binomialInv(x, ni, p), settings);
       }
       case 'poisson': {
         const [x, lambda] = vals;
         const k = Math.round(x);
         if (lambda <= 0) return 'Domain ERROR';
-        if (state.distFunc === 'pd') return formatNumber(poissonPdf(k, lambda), 'norm');
-        if (state.distFunc === 'cd') return formatNumber(poissonCdf(k, lambda), 'norm');
+        if (state.distFunc === 'pd') return formatNumber(poissonPdf(k, lambda), settings);
+        if (state.distFunc === 'cd') return formatNumber(poissonCdf(k, lambda), settings);
         if (x <= 0 || x >= 1) return 'Domain ERROR';
-        return formatNumber(poissonInv(x, lambda), 'norm');
+        return formatNumber(poissonInv(x, lambda), settings);
       }
       default:
         return 'ERROR';
@@ -119,7 +120,7 @@ export function getDistributionDisplay(state: DistributionState): DisplayState {
 export function handleDistributionKey(
   state: DistributionState,
   key: KeyId,
-  _ctx: KeyContext,
+  ctx: KeyContext,
 ): { state: DistributionState; result: ModeResult } {
   const numKeys: Partial<Record<KeyId, string>> = {
     ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
@@ -187,7 +188,7 @@ export function handleDistributionKey(
       }
       const nextState = { ...state, params, inputBuffer: '', screen: 'result' as const };
       return {
-        state: { ...nextState, resultText: computeResult(nextState) },
+        state: { ...nextState, resultText: computeResult(nextState, ctx.settings) },
         result: { handled: true },
       };
     }

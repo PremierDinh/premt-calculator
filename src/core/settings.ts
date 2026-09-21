@@ -25,6 +25,7 @@ export interface CalculatorSettings {
   contrast: number;
   autoPowerOffMin: number;
   language: Language;
+  fractionOutput: boolean;
 }
 
 export const DEFAULT_SETTINGS: CalculatorSettings = {
@@ -41,6 +42,7 @@ export const DEFAULT_SETTINGS: CalculatorSettings = {
   contrast: 3,
   autoPowerOffMin: 10,
   language: 'vi',
+  fractionOutput: true,
 };
 
 export const SETTINGS_ITEMS: Array<{ key: keyof CalculatorSettings; values?: unknown[] }> = [

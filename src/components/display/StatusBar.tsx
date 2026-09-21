@@ -8,6 +8,7 @@ export function StatusBar() {
   const angleUnit = useCalculatorStore((s) => s.settings.angleUnit);
   const language = useCalculatorStore((s) => s.settings.language);
   const numberFormat = useCalculatorStore((s) => s.settings.numberFormat);
+  const fractionOutput = useCalculatorStore((s) => s.settings.fractionOutput);
   const insertMode = useCalculatorStore((s) => s.modeState.calculate.insertMode);
 
   if (power === 'off') return null;
@@ -17,7 +18,9 @@ export function StatusBar() {
       <span className={shiftActive || alphaActive ? lcdStyles.shiftIndicator : undefined}>
         {shiftActive ? 'S ' : ''}{alphaActive ? 'A ' : ''}{insertMode ? 'INS' : ''}
       </span>
-      <span>{angleUnit.toUpperCase()} · {numberFormat} · {language.toUpperCase()}</span>
+      <span>
+        {angleUnit.toUpperCase()} · {numberFormat} · {fractionOutput ? 'a/b' : 'd'} · {language.toUpperCase()}
+      </span>
       <div className={lcdStyles.battery}>
         {[1, 2, 3].map((i) => (
           <div key={i} className={lcdStyles.batteryBar} />

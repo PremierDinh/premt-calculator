@@ -39,7 +39,7 @@ export function getModeDisplay(mode: ModeId, modeState: ModeState, ctx: KeyConte
     case 'calculate': return getCalculateDisplay(modeState.calculate, ctx);
     case 'statistics': return getStatisticsDisplay(modeState.statistics);
     case 'distribution': return getDistributionDisplay(modeState.distribution);
-    case 'table': return getTableDisplay(modeState.table);
+    case 'table': return getTableDisplay(modeState.table, ctx.settings);
     case 'equation': return getEquationDisplay(modeState.equation);
     case 'spreadsheet': return getSpreadsheetDisplay(modeState.spreadsheet);
     case 'inequality': return getInequalityDisplay(modeState.inequality);

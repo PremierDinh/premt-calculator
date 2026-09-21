@@ -76,7 +76,9 @@ describe('settings', () => {
   it('formats numbers according to settings', () => {
     expect(formatNumber(Math.PI, { ...DEFAULT_SETTINGS, numberFormat: 'fix', fixDigits: 2 })).toBe('3.14');
     expect(formatNumber(1234.5, { ...DEFAULT_SETTINGS, digitSeparator: true })).toContain(' ');
-    expect(formatNumber(1.5, { ...DEFAULT_SETTINGS, decimalMark: ',' })).toContain(',');
+    expect(formatNumber(1.234, { ...DEFAULT_SETTINGS, decimalMark: ',', fractionOutput: false })).toContain(',');
+    expect(formatNumber(0.5, { ...DEFAULT_SETTINGS, fractionOutput: true })).toBe('1/2');
+    expect(formatNumber(0.5, { ...DEFAULT_SETTINGS, fractionOutput: false })).toBe('0.5');
     expect(cycleValue(['a', 'b'], 'a')).toBe('b');
   });
 });

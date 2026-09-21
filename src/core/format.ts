@@ -21,7 +21,7 @@ const ENG_SYMBOLS: Array<{ exp: number; symbol: string }> = [
 export function formatValue(value: CalcValue, settings: CalculatorSettings): string {
   switch (value.kind) {
     case 'fraction':
-      if (prefersDecimalOutput(settings)) return formatNumber(value.num / value.den, settings);
+      if (!shouldPreferFraction(settings)) return formatNumber(value.num / value.den, settings);
       return localizeNumber(formatFraction(value, settings.fractionForm === 'mixed'), settings);
     case 'complex':
       return localizeNumber(formatComplex(value, settings.complexForm, settings.angleUnit), settings);
@@ -32,9 +32,9 @@ export function formatValue(value: CalcValue, settings: CalculatorSettings): str
     case 'string':
       return value.value;
     default:
-      if (!prefersDecimalOutput(settings) && settings.inputOutput.includes('MathO')) {
+      if (shouldPreferFraction(settings)) {
         const frac = toFraction(value.value);
-        if (frac && frac.den !== 1 && frac.den <= 1000) {
+        if (frac && frac.den <= 10000) {
           return localizeNumber(formatFraction(frac, settings.fractionForm === 'mixed'), settings);
         }
       }
@@ -42,11 +42,22 @@ export function formatValue(value: CalcValue, settings: CalculatorSettings): str
   }
 }
 
+export function shouldPreferFraction(settings: CalculatorSettings): boolean {
+  return settings.fractionOutput && !prefersDecimalOutput(settings);
+}
+
 export function formatNumber(value: number, settingsOrFormat: CalculatorSettings | NumberFormat = 'norm'): string {
   const settings: CalculatorSettings = typeof settingsOrFormat === 'string'
     ? { ...DEFAULT_SETTINGS, numberFormat: settingsOrFormat }
     : settingsOrFormat;
   if (!Number.isFinite(value)) return 'Math ERROR';
+
+  if (shouldPreferFraction(settings) && settings.numberFormat === 'norm') {
+    const frac = toFraction(value);
+    if (frac && frac.den <= 10000) {
+      return localizeNumber(formatFraction(frac, settings.fractionForm === 'mixed'), settings);
+    }
+  }
 
   let raw: string;
   switch (settings.numberFormat) {

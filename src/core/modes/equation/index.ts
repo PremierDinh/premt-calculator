@@ -1,4 +1,5 @@
 import type { DisplayState, EquationState, EqnType, KeyContext, KeyId, ModeResult } from '../../types';
+import type { CalculatorSettings } from '../../settings';
 import { formatNumber } from '../../format';
 
 export function createEquationState(): EquationState {
@@ -18,48 +19,48 @@ const COEFF_LABELS: Record<EqnType, string[]> = {
   general: ['coeff', 'constant'],
 };
 
-function solveQuadratic(a: number, b: number, c: number): string {
+function solveQuadratic(a: number, b: number, c: number, settings: CalculatorSettings): string {
   if (Math.abs(a) < 1e-12) {
     if (Math.abs(b) < 1e-12) return c === 0 ? 'All real' : 'No solution';
-    return `x=${formatNumber(-c / b, 'norm')}`;
+    return `x=${formatNumber(-c / b, settings)}`;
   }
   const delta = b * b - 4 * a * c;
   if (delta < 0) {
     const re = -b / (2 * a);
     const im = Math.sqrt(-delta) / (2 * a);
-    return `x=${formatNumber(re, 'norm')}±${formatNumber(im, 'norm')}i`;
+    return `x=${formatNumber(re, settings)}±${formatNumber(im, settings)}i`;
   }
   if (Math.abs(delta) < 1e-10) {
-    return `x=${formatNumber(-b / (2 * a), 'norm')}`;
+    return `x=${formatNumber(-b / (2 * a), settings)}`;
   }
   const x1 = (-b + Math.sqrt(delta)) / (2 * a);
   const x2 = (-b - Math.sqrt(delta)) / (2 * a);
-  return `x1=${formatNumber(x1, 'norm')}\nx2=${formatNumber(x2, 'norm')}`;
+  return `x1=${formatNumber(x1, settings)}\nx2=${formatNumber(x2, settings)}`;
 }
 
-function solveSimultaneous(coeffs: number[]): string {
+function solveSimultaneous(coeffs: number[], settings: CalculatorSettings): string {
   const [a1, b1, c1, a2, b2, c2] = coeffs;
   const det = a1 * b2 - a2 * b1;
   if (Math.abs(det) < 1e-12) return 'No unique sol.';
   const x = (c1 * b2 - c2 * b1) / det;
   const y = (a1 * c2 - a2 * c1) / det;
-  return `x=${formatNumber(x, 'norm')}\ny=${formatNumber(y, 'norm')}`;
+  return `x=${formatNumber(x, settings)}\ny=${formatNumber(y, settings)}`;
 }
 
-function solveGeneral(coeff: number, constant: number): string {
+function solveGeneral(coeff: number, constant: number, settings: CalculatorSettings): string {
   if (Math.abs(coeff) < 1e-12) return constant === 0 ? 'All real' : 'No solution';
-  return `x=${formatNumber(constant / coeff, 'norm')}`;
+  return `x=${formatNumber(constant / coeff, settings)}`;
 }
 
-function computeResult(state: EquationState): string {
+function computeResult(state: EquationState, settings: CalculatorSettings): string {
   const vals = state.coefficients.map((c) => parseFloat(c) || 0);
   switch (state.eqnType) {
     case 'quadratic':
-      return solveQuadratic(vals[0], vals[1], vals[2]);
+      return solveQuadratic(vals[0], vals[1], vals[2], settings);
     case 'simultaneous':
-      return solveSimultaneous(vals);
+      return solveSimultaneous(vals, settings);
     case 'general':
-      return solveGeneral(vals[0], vals[1]);
+      return solveGeneral(vals[0], vals[1], settings);
     default:
       return 'ERROR';
   }
@@ -99,7 +100,7 @@ const EQN_TYPES: EqnType[] = ['quadratic', 'simultaneous', 'general'];
 export function handleEquationKey(
   state: EquationState,
   key: KeyId,
-  _ctx: KeyContext,
+  ctx: KeyContext,
 ): { state: EquationState; result: ModeResult } {
   const numKeys: Partial<Record<KeyId, string>> = {
     ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
@@ -157,7 +158,7 @@ export function handleEquationKey(
       }
       const nextState = { ...state, coefficients, screen: 'result' as const, inputBuffer: '' };
       return {
-        state: { ...nextState, resultText: computeResult(nextState) },
+        state: { ...nextState, resultText: computeResult(nextState, ctx.settings) },
         result: { handled: true },
       };
     }

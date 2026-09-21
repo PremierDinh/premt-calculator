@@ -1,4 +1,5 @@
 import type { DisplayState, KeyContext, KeyId, ModeResult, TableState } from '../../types';
+import { DEFAULT_SETTINGS, type CalculatorSettings } from '../../settings';
 import { createEvalContext, evaluateFunction } from '../../../math/evaluator';
 import { formatNumber } from '../../format';
 
@@ -57,7 +58,7 @@ function generateTable(state: TableState, ctx: KeyContext): { x: number; fx: num
   return data;
 }
 
-export function getTableDisplay(state: TableState): DisplayState {
+export function getTableDisplay(state: TableState, settings: CalculatorSettings = DEFAULT_SETTINGS): DisplayState {
   switch (state.screen) {
     case 'func':
       return {
@@ -90,10 +91,10 @@ export function getTableDisplay(state: TableState): DisplayState {
     case 'table': {
       const row = state.tableData[state.scrollIndex];
       if (!row) return { lines: [{ text: 'No data' }] };
-      const fxStr = Number.isNaN(row.fx) ? 'ERROR' : formatNumber(row.fx, 'norm');
+      const fxStr = Number.isNaN(row.fx) ? 'ERROR' : formatNumber(row.fx, settings);
       return {
         lines: [
-          { text: `x=${formatNumber(row.x, 'norm')}`, size: 'small' },
+          { text: `x=${formatNumber(row.x, settings)}`, size: 'small' },
           { text: `f(x)=${fxStr}`, align: 'right', size: 'large' },
           { text: `${state.scrollIndex + 1}/${state.tableData.length}`, size: 'small' },
         ],
