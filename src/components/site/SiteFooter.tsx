@@ -1,4 +1,4 @@
-import { t } from '../../i18n/strings';
+import { LIVE_DEMO_URL, t } from '../../i18n/strings';
 import { useCalculatorStore } from '../../store/calculatorStore';
 
 export function SiteFooter() {
@@ -10,6 +10,11 @@ export function SiteFooter() {
         <p className="footerBrand">
           <img src="/premt-logo.jpg" alt="" className="footerLogo" aria-hidden="true" />
           {t(language, 'brand')}
+        </p>
+        <p>
+          <a href={LIVE_DEMO_URL} target="_blank" rel="noreferrer">
+            {t(language, 'liveDemo')}
+          </a>
         </p>
       </div>
     </footer>

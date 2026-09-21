@@ -1,6 +1,5 @@
-import QRCode from 'qrcode';
-
 export async function encodeQrDataUrl(payload: string): Promise<string> {
+  const QRCode = (await import('qrcode')).default;
   return QRCode.toDataURL(payload, {
     errorCorrectionLevel: 'M',
     margin: 1,

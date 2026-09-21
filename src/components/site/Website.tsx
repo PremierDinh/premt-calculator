@@ -2,7 +2,7 @@ import { CalculatorShell } from '../CalculatorShell';
 import { GuidePanel } from './GuidePanel';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
-import { t } from '../../i18n/strings';
+import { LIVE_DEMO_URL, modeBlurb, t } from '../../i18n/strings';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import type { ModeId } from '../../core/types';
 
@@ -21,6 +21,8 @@ export function Website() {
     document.querySelector<HTMLElement>('[data-calculator-shell]')?.focus();
   };
 
+  const heroTips = ['heroTip1', 'heroTip2', 'heroTip3', 'heroTip4'] as const;
+
   return (
     <div className="site" id="top">
       <SiteHeader />
@@ -38,15 +40,17 @@ export function Website() {
               <div className="heroActions">
                 <a className="btn btnPrimary" href="#simulator">{t(language, 'openSim')}</a>
                 <a className="btn btnGhost" href="#guide">{t(language, 'seeGuide')}</a>
+                <a className="btn btnGhost" href={LIVE_DEMO_URL} target="_blank" rel="noreferrer">
+                  {t(language, 'liveDemo')}
+                </a>
               </div>
             </div>
             <aside className="heroCard">
               <h2>{t(language, 'simulator')}</h2>
               <ol>
-                <li>{language === 'vi' ? 'HOME mở 13 ứng dụng. D-pad chọn, OK/EXE vào.' : 'HOME shows 13 apps. Use the D-pad, then OK/EXE.'}</li>
-                <li>{language === 'vi' ? 'SHIFT mở lớp chức năng xanh. VARIABLE rồi 4–6 / 1–3 / 0 . ×10ˣ gọi A–F, x, y, z.' : 'SHIFT opens the blue legends. VARIABLE then 4–6 / 1–3 / 0 . ×10ˣ recalls A–F, x, y, z.'}</li>
-                <li>{language === 'vi' ? 'CATALOG/TOOLS theo ngữ cảnh từng app.' : 'CATALOG and TOOLS are context-sensitive.'}</li>
-                <li>{language === 'vi' ? 'SETTINGS: góc, định dạng, phân số, ngôn ngữ...' : 'SETTINGS covers angle, format, fractions, language and more.'}</li>
+                {heroTips.map((key) => (
+                  <li key={key}>{t(language, key)}</li>
+                ))}
               </ol>
             </aside>
           </div>
@@ -55,11 +59,7 @@ export function Website() {
         <section className="section sectionAlt" id="modes">
           <div className="sectionInner">
             <h2>{t(language, 'modes')}</h2>
-            <p className="sectionIntro">
-              {language === 'vi'
-                ? 'Mười ba ứng dụng độc lập trên màn hình Home, chuyển bằng HOME hoặc MENU.'
-                : 'Thirteen independent apps on the Home screen. Switch with HOME or MENU.'}
-            </p>
+            <p className="sectionIntro">{t(language, 'modesIntro')}</p>
             <div className="featureGrid">
               {MODE_KEYS.map((key) => (
                 <button
@@ -69,7 +69,7 @@ export function Website() {
                   onClick={() => openMode(key)}
                 >
                   <h3>{t(language, key)}</h3>
-                  <p>{appBlurb(language, key)}</p>
+                  <p>{modeBlurb(language, key)}</p>
                 </button>
               ))}
             </div>
@@ -79,11 +79,7 @@ export function Website() {
         <section className="section" id="simulator">
           <div className="sectionInner">
             <h2>{t(language, 'simulator')}</h2>
-            <p className="sectionIntro">
-              {language === 'vi'
-                ? 'Bấm vào máy tính để dùng chuột, cảm ứng hoặc bàn phím. Enter = EXE, Escape = AC, mũi tên = D-pad.'
-                : 'Click the calculator to use mouse, touch or a physical keyboard. Enter = EXE, Escape = AC, arrows = D-pad.'}
-            </p>
+            <p className="sectionIntro">{t(language, 'simIntro')}</p>
             <div className="simulatorLayout">
               <CalculatorShell />
               <GuidePanel language={language} />
@@ -95,38 +91,4 @@ export function Website() {
       <SiteFooter />
     </div>
   );
-}
-
-function appBlurb(lang: 'vi' | 'en', key: typeof MODE_KEYS[number]): string {
-  const vi: Record<typeof MODE_KEYS[number], string> = {
-    calculate: 'Biểu thức, phân số, lượng giác, tích phân, đạo hàm, GCD/LCM, nPr/nCr, Ans/PreAns.',
-    statistics: '1 biến và 2 biến: trung bình, σ, tứ phân vị, hồi quy.',
-    distribution: 'Normal, Binomial, Poisson — PD, CD, Inv.',
-    spreadsheet: 'Lưới 45×5, công thức =A1+B1 và SUM.',
-    table: 'Bảng f(x) với Start, End, Step.',
-    equation: 'Bậc 2, hệ 2 ẩn, nghiệm số Newton.',
-    inequality: 'Bất phương trình tuyến tính và bậc 2.',
-    complex: 'a+bi, modulus, argument, dạng cực.',
-    basen: 'DEC/HEX/OCT/BIN và phép tính nguyên.',
-    matrix: 'Cộng, nhân, det, nghịch đảo, chuyển vị. MatA–C.',
-    vector: 'Cộng, dot, cross, độ dài. VctA–C.',
-    ratio: 'Giải A:B = C:X.',
-    mathbox: 'Xúc xắc, đồng xu, số ngẫu nhiên, GCD, LCM.',
-  };
-  const en: Record<typeof MODE_KEYS[number], string> = {
-    calculate: 'Expressions, fractions, trig, integrals, derivatives, GCD/LCM, nPr/nCr, Ans/PreAns.',
-    statistics: '1- and 2-variable stats: mean, σ, quartiles, regression.',
-    distribution: 'Normal, Binomial, Poisson — PD, CD, Inv.',
-    spreadsheet: '45×5 grid with =A1+B1 and SUM.',
-    table: 'f(x) tables with Start, End, Step.',
-    equation: 'Quadratic, 2-unknown systems, Newton solver.',
-    inequality: 'Linear and quadratic inequalities.',
-    complex: 'a+bi, modulus, argument, polar form.',
-    basen: 'DEC/HEX/OCT/BIN integer arithmetic.',
-    matrix: 'Add, multiply, det, inverse, transpose. MatA–C.',
-    vector: 'Add, dot, cross, magnitude. VctA–C.',
-    ratio: 'Solve A:B = C:X.',
-    mathbox: 'Dice, coin, random integers, GCD, LCM.',
-  };
-  return lang === 'en' ? en[key] : vi[key];
 }

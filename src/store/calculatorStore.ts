@@ -7,7 +7,7 @@ import type { DisplayState, HistoryEntry, KeyContext, KeyId, ModeId, Overlay, Po
 import { createInitialModeState, getModeDisplay, handleModeKey } from '../core/modes';
 import { applySetting, DEFAULT_SETTINGS, SETTINGS_ITEMS, type CalculatorSettings, type Language } from '../core/settings';
 import { cycleFormat } from '../core/format';
-import { getCatalog, getTools } from '../core/catalog';
+import { applyCatalogItem, getCatalog, getTools } from '../core/catalog';
 import { settingLabel, t } from '../i18n/strings';
 import { insertAtCursor } from '../math/expression';
 import { buildQrPayload, encodeQrDataUrl } from '../qr';
@@ -475,23 +475,49 @@ function handleCatalogKeys(
       get().pressKey('FUNCTION');
       return;
     }
-    if (state.currentMode === 'calculate') {
-      const calc = state.modeState.calculate;
-      const { text, cursor } = insertAtCursor(calc.expression, item.insert, calc.cursorPos);
-      set({
-        overlay: 'none',
-        modeState: { ...state.modeState, calculate: { ...calc, expression: text, cursorPos: cursor, showResult: false } },
-      });
+    const applied = applyCatalogItem(state.currentMode, state.modeState, item.insert);
+    if (applied.kind === 'modeState') {
+      set({ overlay: 'none', modeState: applied.modeState });
       return;
     }
-    if (state.currentMode === 'complex') {
-      const cplx = state.modeState.complex;
-      const { text, cursor } = insertAtCursor(cplx.expression, item.insert, cplx.cursorPos);
-      set({
-        overlay: 'none',
-        modeState: { ...state.modeState, complex: { ...cplx, expression: text, cursorPos: cursor, showResult: false } },
-      });
-      return;
+    if (applied.kind === 'insert') {
+      if (applied.field === 'expression' && state.currentMode === 'calculate') {
+        const calc = state.modeState.calculate;
+        const { text, cursor } = insertAtCursor(calc.expression, item.insert, calc.cursorPos);
+        set({
+          overlay: 'none',
+          modeState: { ...state.modeState, calculate: { ...calc, expression: text, cursorPos: cursor, showResult: false } },
+        });
+        return;
+      }
+      if (applied.field === 'expression' && state.currentMode === 'complex') {
+        const cplx = state.modeState.complex;
+        const { text, cursor } = insertAtCursor(cplx.expression, item.insert, cplx.cursorPos);
+        set({
+          overlay: 'none',
+          modeState: { ...state.modeState, complex: { ...cplx, expression: text, cursorPos: cursor, showResult: false } },
+        });
+        return;
+      }
+      if (applied.field === 'inputBuffer' && state.currentMode === 'table') {
+        const tbl = state.modeState.table;
+        set({
+          overlay: 'none',
+          modeState: {
+            ...state.modeState,
+            table: { ...tbl, inputBuffer: tbl.inputBuffer + item.insert, screen: 'func' },
+          },
+        });
+        return;
+      }
+      if (applied.field === 'basenExpr' && state.currentMode === 'basen') {
+        const basen = state.modeState.basen;
+        set({
+          overlay: 'none',
+          modeState: { ...state.modeState, basen: { ...basen, expression: basen.expression + item.insert, result: '' } },
+        });
+        return;
+      }
     }
     set({ overlay: 'none' });
   }
