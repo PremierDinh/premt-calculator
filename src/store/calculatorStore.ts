@@ -68,6 +68,31 @@ function persistLanguage(language: Language) {
   }
 }
 
+function applyFractionDisplayToggle(state: CalculatorStore): Partial<CalculatorStore> {
+  const settings = { ...state.settings, fractionOutput: !state.settings.fractionOutput };
+  const updates: Partial<CalculatorStore> = { settings };
+
+  if (state.currentMode === 'calculate' && state.modeState.calculate.showResult && state.lastValue) {
+    updates.modeState = {
+      ...state.modeState,
+      calculate: {
+        ...state.modeState.calculate,
+        result: formatValue(state.lastValue, settings),
+      },
+    };
+  } else if (state.currentMode === 'complex' && state.modeState.complex.showResult && state.lastValue) {
+    updates.modeState = {
+      ...state.modeState,
+      complex: {
+        ...state.modeState.complex,
+        result: formatValue(state.lastValue, settings),
+      },
+    };
+  }
+
+  return updates;
+}
+
 function valueToAns(value: CalcValue | number): number {
   if (typeof value === 'number') return value;
   try { return toReal(value); } catch { return 0; }
@@ -307,37 +332,16 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
     }
 
     if (key === 'FORMAT' && (state.currentMode === 'calculate' || state.currentMode === 'complex')) {
-      set({ settings: { ...state.settings, numberFormat: cycleFormat(state.settings.numberFormat) } });
+      if (state.shiftActive) {
+        set({
+          settings: { ...state.settings, numberFormat: cycleFormat(state.settings.numberFormat) },
+          shiftActive: false,
+        });
+      } else {
+        set(applyFractionDisplayToggle(state));
+      }
       get().refreshDisplay();
       return;
-    }
-
-    if (key === 'FRAC' && !state.shiftActive && !state.alphaActive) {
-      const calc = state.modeState.calculate;
-      const editingCalc = state.currentMode === 'calculate' && calc.expression.trim() && !calc.showResult;
-      if (!editingCalc) {
-        const settings = { ...state.settings, fractionOutput: !state.settings.fractionOutput };
-        const updates: Partial<CalculatorStore> = { settings, pressedKey: key, lastInputAt: Date.now() };
-        if (state.currentMode === 'calculate' && calc.showResult && state.lastValue) {
-          updates.modeState = {
-            ...state.modeState,
-            calculate: { ...calc, result: formatValue(state.lastValue, settings) },
-          };
-        }
-        if (state.currentMode === 'complex' && state.modeState.complex.showResult && state.lastValue) {
-          updates.modeState = {
-            ...(updates.modeState ?? state.modeState),
-            complex: {
-              ...state.modeState.complex,
-              result: formatValue(state.lastValue, settings),
-            },
-          };
-        }
-        set(updates);
-        get().refreshDisplay();
-        get().releaseKey();
-        return;
-      }
     }
 
     const ctx = makeContext(state);
