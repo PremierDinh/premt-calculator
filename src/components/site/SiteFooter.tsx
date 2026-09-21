@@ -8,7 +8,7 @@ export function SiteFooter() {
       <div className="footerInner">
         <p>{t(language, 'footerNote')}</p>
         <p className="footerBrand">
-          <img src="/premt-logo.jpg" alt="" className="footerLogo" aria-hidden="true" />
+          <img src={`${import.meta.env.BASE_URL}premt-logo.jpg`} alt="" className="footerLogo" aria-hidden="true" />
           {t(language, 'brand')}
         </p>
         <p>

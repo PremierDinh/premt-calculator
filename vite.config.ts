@@ -1,8 +1,8 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
-export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/premt-calculator/' : '/',
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/premt-calculator/' : '/',
   plugins: [react()],
   server: {
     port: 5173,
@@ -17,4 +17,4 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     setupFiles: ['src/test/setup.ts'],
   },
-})
+}))

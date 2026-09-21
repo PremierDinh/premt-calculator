@@ -150,7 +150,7 @@ export function getStatisticsDisplay(state: StatisticsState): DisplayState {
 export function handleStatisticsKey(
   state: StatisticsState,
   key: KeyId,
-  _ctx: KeyContext,
+  ctx: KeyContext,
 ): { state: StatisticsState; result: ModeResult } {
   const numKeys: Partial<Record<KeyId, string>> = {
     ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',

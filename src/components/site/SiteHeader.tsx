@@ -9,7 +9,7 @@ export function SiteHeader() {
     <header className="header">
       <div className="headerInner">
         <a href="#top" className="logo">
-          <img src="/premt-logo.jpg" alt="PREM" className="logoImg" />
+          <img src={`${import.meta.env.BASE_URL}premt-logo.jpg`} alt="PREM" className="logoImg" />
           <span className="logoText">
             <span className="logoMark">{t(language, 'brand')}</span>
             <span className="logoSub">{t(language, 'model')}</span>

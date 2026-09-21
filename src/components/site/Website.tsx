@@ -32,7 +32,7 @@ export function Website() {
           <div className="sectionInner heroInner">
             <div>
               <div className="heroBrand">
-                <img src="/premt-logo.jpg" alt="PREM" className="heroLogo" />
+                <img src={`${import.meta.env.BASE_URL}premt-logo.jpg`} alt="PREM" className="heroLogo" />
                 <p className="kicker">{t(language, 'brand')}</p>
               </div>
               <h1>{t(language, 'siteTitle')}</h1>
