@@ -47,19 +47,26 @@ export function Key({ definition, className, wrapperClass }: KeyProps) {
         {shiftLabel === 'OFF' ? null : <i className={styles.leader} />}
       </span>
     )
-    : alphaLabel
-      ? (
-        <span className={styles.alphaLabel}>
-          {alphaLabel}
-          <i className={styles.leader} />
-        </span>
-      )
-      : null;
+    : null;
 
-  const legend = caption || shiftNode
+  const alphaNode = alphaLabel
+    ? (
+      <span className={styles.alphaLabel}>
+        {alphaLabel}
+        <i className={styles.leader} />
+      </span>
+    )
+    : null;
+
+  const legend = caption || shiftNode || alphaNode
     ? (
       <span className={styles.legendRow}>
-        {shiftNode}
+        {(shiftNode || alphaNode) && (
+          <span className={styles.shiftStack}>
+            {shiftNode}
+            {alphaNode}
+          </span>
+        )}
         {caption ? <span className={styles.caption}>{caption}</span> : null}
       </span>
     )

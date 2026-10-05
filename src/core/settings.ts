@@ -82,3 +82,7 @@ export function prefersDecimalOutput(settings: CalculatorSettings): boolean {
 export function prefersLineInput(settings: CalculatorSettings): boolean {
   return settings.inputOutput.startsWith('LineI');
 }
+
+export function prefersMathInput(settings: CalculatorSettings): boolean {
+  return settings.inputOutput.startsWith('MathI');
+}

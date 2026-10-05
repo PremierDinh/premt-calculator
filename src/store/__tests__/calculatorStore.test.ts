@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createInitialModeState } from '../../core/modes';
 import { useCalculatorStore } from '../calculatorStore';
 
 describe('calculatorStore', () => {
@@ -7,8 +8,11 @@ describe('calculatorStore', () => {
       power: 'on',
       currentMode: 'calculate',
       shiftActive: false,
+      alphaActive: false,
       overlay: 'none',
-      modeState: useCalculatorStore.getState().modeState,
+      history: [],
+      ans: 0,
+      modeState: createInitialModeState(),
     });
   });
 
@@ -43,6 +47,36 @@ describe('calculatorStore', () => {
     useCalculatorStore.getState().pressKey('SHIFT');
     useCalculatorStore.getState().pressKey('FORMAT');
     expect(useCalculatorStore.getState().settings.numberFormat).toBe('fix');
+    expect(useCalculatorStore.getState().shiftActive).toBe(false);
+  });
+
+  it('evaluates with SHIFT+( instead of inserting =', () => {
+    for (const key of ['ONE', 'PLUS', 'ONE', 'EXE'] as const) {
+      useCalculatorStore.getState().pressKey(key);
+    }
+    expect(useCalculatorStore.getState().modeState.calculate.result).toBe('2');
+
+    useCalculatorStore.getState().pressKey('SHIFT');
+    useCalculatorStore.getState().pressKey('LPAREN');
+    expect(useCalculatorStore.getState().shiftActive).toBe(false);
+    expect(useCalculatorStore.getState().modeState.calculate.result).toBe('2');
+  });
+
+  it('opens history overlay with SHIFT+CATALOG (LIST)', () => {
+    for (const key of ['TWO', 'EXE'] as const) {
+      useCalculatorStore.getState().pressKey(key);
+    }
+    useCalculatorStore.getState().pressKey('SHIFT');
+    useCalculatorStore.getState().pressKey('CATALOG');
+    const display = useCalculatorStore.getState().display;
+    expect(display.overlay).toBe('history');
+    expect(display.lines.some((l) => l.text.includes('2=2'))).toBe(true);
+  });
+
+  it('toggles mixed fraction form with SHIFT+×', () => {
+    useCalculatorStore.getState().pressKey('SHIFT');
+    useCalculatorStore.getState().pressKey('MULT');
+    expect(useCalculatorStore.getState().settings.fractionForm).toBe('mixed');
     expect(useCalculatorStore.getState().shiftActive).toBe(false);
   });
 });

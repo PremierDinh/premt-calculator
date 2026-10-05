@@ -1,0 +1,20 @@
+{
+  "name": "premt calculator",
+  "short_name": "premt",
+  "description": "Mô phỏng máy tính khoa học ClassWiz trên trình duyệt — 13 ứng dụng, VI/EN.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#b4d9ce",
+  "theme_color": "#2563eb",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "premt-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

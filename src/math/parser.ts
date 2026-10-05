@@ -1,4 +1,5 @@
 import type { AstNode } from './ast';
+import { parseRecurringLiteral } from './recurring';
 import { tokenize, type Token } from './tokenizer';
 
 const FUNCTIONS = new Set([
@@ -114,7 +115,8 @@ class Parser {
 
     if (t.type === 'number') {
       this.eat();
-      return { type: 'number', value: Number(t.value) };
+      const recur = parseRecurringLiteral(t.value);
+      return { type: 'number', value: recur ?? Number(t.value) };
     }
 
     if (t.type === 'ident') {

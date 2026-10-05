@@ -23,7 +23,7 @@ export type ModeId =
 
 export type PowerState = 'on' | 'off';
 
-export type Overlay = 'none' | 'settings' | 'catalog' | 'tools' | 'menu' | 'qr';
+export type Overlay = 'none' | 'settings' | 'catalog' | 'tools' | 'menu' | 'qr' | 'history';
 
 export type KeyId =
   | 'ON'
@@ -105,6 +105,8 @@ export interface DisplayLine {
   text: string;
   align?: 'left' | 'right';
   size?: 'normal' | 'small' | 'large';
+  /** Render stacked fractions (MathI/MathO) */
+  natural?: boolean;
 }
 
 export type HomeIcon = ModeId;

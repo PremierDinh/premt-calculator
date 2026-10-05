@@ -2,6 +2,7 @@ import lcdStyles from '../../styles/lcd.module.css';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import { StatusBar } from './StatusBar';
 import { HomeMenu } from './HomeMenu';
+import { NaturalLine } from './NaturalLine';
 
 export function LCDScreen() {
   const display = useCalculatorStore((s) => s.display);
@@ -34,7 +35,7 @@ export function LCDScreen() {
                 line.size === 'large' ? lcdStyles.lineLarge : '',
               ].filter(Boolean).join(' ')}
             >
-              {line.text}
+              {line.natural ? <NaturalLine text={line.text} /> : line.text}
             </div>
           ))
         )}

@@ -67,22 +67,35 @@ function MenuIcon({ icon }: { icon: ModeId }) {
 
 export function HomeMenu({ items, selectedIndex }: HomeMenuProps) {
   const page = Math.floor(selectedIndex / 6);
+  const pageCount = Math.ceil(items.length / 6);
   const visible = items.slice(page * 6, page * 6 + 6);
 
   return (
-    <div className={lcdStyles.homeGrid}>
-      {visible.map((item, i) => {
-        const abs = page * 6 + i;
-        return (
-          <div
-            key={item.id}
-            className={`${lcdStyles.menuItem} ${abs === selectedIndex ? lcdStyles.menuItemSelected : ''}`}
-          >
-            <MenuIcon icon={item.icon} />
-            <span className={lcdStyles.menuLabel}>{item.label}</span>
-          </div>
-        );
-      })}
-    </div>
+    <>
+      <div className={lcdStyles.homeGrid}>
+        {visible.map((item, i) => {
+          const abs = page * 6 + i;
+          return (
+            <div
+              key={item.id}
+              className={`${lcdStyles.menuItem} ${abs === selectedIndex ? lcdStyles.menuItemSelected : ''}`}
+            >
+              <MenuIcon icon={item.icon} />
+              <span className={lcdStyles.menuLabel}>{item.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      {pageCount > 1 && (
+        <div className={lcdStyles.pageDots} aria-hidden="true">
+          {Array.from({ length: pageCount }, (_, i) => (
+            <span
+              key={i}
+              className={`${lcdStyles.pageDot} ${i === page ? lcdStyles.pageDotActive : ''}`}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 }

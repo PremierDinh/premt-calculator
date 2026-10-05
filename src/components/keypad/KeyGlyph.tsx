@@ -5,6 +5,13 @@ const ink = '#1a1a1a';
 
 export function KeyGlyph({ id }: { id: KeyId }) {
   switch (id) {
+    case 'ON':
+      return (
+        <svg viewBox="0 0 32 32" className={styles.glyph} aria-hidden="true">
+          <circle cx="16" cy="16" r="9" fill="none" stroke={ink} strokeWidth="1.8" />
+          <path d="M16 16V9" stroke={ink} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
     case 'HOME':
       return (
         <svg viewBox="0 0 32 32" className={styles.glyph} aria-hidden="true">
@@ -270,7 +277,7 @@ export function ShiftMark({ kind }: { kind: string }) {
 }
 
 export const GLYPH_KEYS: KeyId[] = [
-  'HOME', 'SETTINGS', 'EXIT', 'SHIFT', 'VARIABLE', 'FUNCTION', 'CATALOG', 'TOOLS',
+  'ON', 'HOME', 'SETTINGS', 'EXIT', 'SHIFT', 'VARIABLE', 'FUNCTION', 'CATALOG', 'TOOLS',
   'UP', 'DOWN', 'LEFT', 'RIGHT', 'PAGEUP', 'PAGEDOWN',
   'X', 'FRAC', 'SQRT', 'POWER', 'SQUARE', 'LOG', 'DEL', 'EXP10', 'FORMAT',
 ];

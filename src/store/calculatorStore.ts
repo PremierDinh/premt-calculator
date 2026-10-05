@@ -49,6 +49,7 @@ interface CalculatorStore {
 }
 
 const LANGUAGE_STORAGE_KEY = 'premt-lang';
+const SETTINGS_STORAGE_KEY = 'premt-settings';
 
 function loadStoredLanguage(): Language | null {
   try {
@@ -60,9 +61,26 @@ function loadStoredLanguage(): Language | null {
   return null;
 }
 
-function persistLanguage(language: Language) {
+function loadStoredSettings(): CalculatorSettings {
   try {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<CalculatorSettings>;
+      return { ...DEFAULT_SETTINGS, ...parsed };
+    }
+  } catch {
+    /* ignore storage errors */
+  }
+  const storedLanguage = loadStoredLanguage();
+  return storedLanguage
+    ? { ...DEFAULT_SETTINGS, language: storedLanguage }
+    : { ...DEFAULT_SETTINGS };
+}
+
+function persistSettings(settings: CalculatorSettings) {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, settings.language);
   } catch {
     /* ignore storage errors */
   }
@@ -70,6 +88,34 @@ function persistLanguage(language: Language) {
 
 function applyFractionDisplayToggle(state: CalculatorStore): Partial<CalculatorStore> {
   const settings = { ...state.settings, fractionOutput: !state.settings.fractionOutput };
+  const updates: Partial<CalculatorStore> = { settings };
+
+  if (state.currentMode === 'calculate' && state.modeState.calculate.showResult && state.lastValue) {
+    updates.modeState = {
+      ...state.modeState,
+      calculate: {
+        ...state.modeState.calculate,
+        result: formatValue(state.lastValue, settings),
+      },
+    };
+  } else if (state.currentMode === 'complex' && state.modeState.complex.showResult && state.lastValue) {
+    updates.modeState = {
+      ...state.modeState,
+      complex: {
+        ...state.modeState.complex,
+        result: formatValue(state.lastValue, settings),
+      },
+    };
+  }
+
+  return updates;
+}
+
+function applyMixedFractionToggle(state: CalculatorStore): Partial<CalculatorStore> {
+  const settings = {
+    ...state.settings,
+    fractionForm: state.settings.fractionForm === 'mixed' ? 'improper' as const : 'mixed' as const,
+  };
   const updates: Partial<CalculatorStore> = { settings };
 
   if (state.currentMode === 'calculate' && state.modeState.calculate.showResult && state.lastValue) {
@@ -146,6 +192,27 @@ function buildDisplay(state: CalculatorStore): DisplayState {
     };
   }
 
+  if (state.overlay === 'history') {
+    const items = state.history.slice(-20).reverse();
+    return {
+      lines: items.length
+        ? [
+          { text: 'LIST', size: 'small' },
+          ...items.map((item, i) => ({
+            text: i === state.overlayIndex ? `▶ ${item.expression}=${item.result}` : `${item.expression}=${item.result}`,
+            size: 'small' as const,
+          })),
+        ]
+        : [
+          { text: 'LIST', size: 'small' },
+          { text: '—', size: 'small' },
+        ],
+      overlay: 'history',
+      showShift: state.shiftActive,
+      showAlpha: state.alphaActive,
+    };
+  }
+
   if (state.overlay === 'menu') {
     const items = [
       t(state.settings.language, 'home'),
@@ -199,12 +266,7 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   variables: { ...DEFAULT_VARS },
   matrices: {},
   vectors: {},
-  settings: (() => {
-    const storedLanguage = loadStoredLanguage();
-    return storedLanguage
-      ? { ...DEFAULT_SETTINGS, language: storedLanguage }
-      : { ...DEFAULT_SETTINGS };
-  })(),
+  settings: loadStoredSettings(),
   modeState: createInitialModeState(),
   display: { lines: [], showHome: true, menuItems: [], selectedMenuIndex: 0 },
   overlay: 'none',
@@ -271,7 +333,15 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
     }
 
     if (key === 'CATALOG') {
-      set({ overlay: state.overlay === 'catalog' ? 'none' : 'catalog', overlayIndex: 0, overlayGroup: 0, shiftActive: false });
+      if (state.shiftActive) {
+        set({
+          overlay: state.overlay === 'history' ? 'none' : 'history',
+          overlayIndex: 0,
+          shiftActive: false,
+        });
+      } else {
+        set({ overlay: state.overlay === 'catalog' ? 'none' : 'catalog', overlayIndex: 0, overlayGroup: 0, shiftActive: false });
+      }
       get().refreshDisplay();
       return;
     }
@@ -309,6 +379,12 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
       return;
     }
 
+    if (state.overlay === 'history') {
+      handleHistoryKeys(key, get, set);
+      get().refreshDisplay();
+      return;
+    }
+
     if (state.overlay === 'catalog' || state.overlay === 'tools') {
       handleCatalogKeys(key, get, set);
       get().refreshDisplay();
@@ -327,6 +403,12 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
       } else if (key === 'ONE') set({ overlay: 'none', currentMode: 'home' });
       else if (key === 'TWO') set({ overlay: 'settings', overlayIndex: 0 });
       else if (key === 'THREE') set({ overlay: 'catalog', overlayIndex: 0, overlayGroup: 0 });
+      get().refreshDisplay();
+      return;
+    }
+
+    if (key === 'MULT' && state.shiftActive && (state.currentMode === 'calculate' || state.currentMode === 'complex')) {
+      set({ ...applyMixedFractionToggle(state), shiftActive: false });
       get().refreshDisplay();
       return;
     }
@@ -427,11 +509,56 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   setLanguage: (language: Language) => {
     const state = get();
     if (state.settings.language === language) return;
-    persistLanguage(language);
     set({ settings: { ...state.settings, language } });
     get().refreshDisplay();
   },
 }));
+
+useCalculatorStore.subscribe((state, prev) => {
+  if (state.settings !== prev.settings) {
+    persistSettings(state.settings);
+  }
+});
+
+function handleHistoryKeys(
+  key: KeyId,
+  get: () => CalculatorStore,
+  set: (p: Partial<CalculatorStore>) => void,
+) {
+  const state = get();
+  const items = state.history.slice(-20).reverse();
+
+  if (key === 'UP') {
+    set({ overlayIndex: Math.max(0, state.overlayIndex - 1) });
+    return;
+  }
+  if (key === 'DOWN' || key === 'SCROLL') {
+    set({ overlayIndex: Math.min(Math.max(0, items.length - 1), state.overlayIndex + 1) });
+    return;
+  }
+  if (key === 'EXE' || key === 'OK') {
+    const item = items[state.overlayIndex];
+    if (item) {
+      set({
+        overlay: 'none',
+        currentMode: 'calculate',
+        modeState: {
+          ...state.modeState,
+          calculate: {
+            ...state.modeState.calculate,
+            expression: item.expression,
+            result: item.result,
+            showResult: true,
+            cursorPos: item.expression.length,
+            historyIndex: -1,
+          },
+        },
+      });
+    } else {
+      set({ overlay: 'none' });
+    }
+  }
+}
 
 function handleSettingsKeys(
   key: KeyId,

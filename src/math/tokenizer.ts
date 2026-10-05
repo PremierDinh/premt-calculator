@@ -30,14 +30,25 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    if (/[0-9]/.test(ch) || (ch === '.' && /[0-9]/.test(src[i + 1] ?? ''))) {
+    if (/[0-9]/.test(ch) || (ch === '.' && (/[0-9]/.test(src[i + 1] ?? '') || src[i + 1] === '{'))) {
       const start = i;
       let raw = '';
       while (i < src.length && /[0-9.]/.test(src[i])) {
         raw += src[i];
         i++;
       }
-      if (src[i] === 'e' || src[i] === 'E') {
+      if (src[i] === '{') {
+        raw += '{';
+        i++;
+        while (i < src.length && /[0-9]/.test(src[i])) {
+          raw += src[i];
+          i++;
+        }
+        if (src[i] === '}') {
+          raw += '}';
+          i++;
+        }
+      } else if (src[i] === 'e' || src[i] === 'E') {
         raw += src[i];
         i++;
         if (src[i] === '+' || src[i] === '-') {

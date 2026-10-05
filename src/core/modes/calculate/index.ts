@@ -2,6 +2,8 @@ import type { CalculateState, DisplayState, KeyContext, KeyId, ModeResult, Varia
 import { deleteAtCursor, insertAtCursor } from '../../../math/expression';
 import { createEvalContext, evaluate } from '../../../math/evaluator';
 import { formatValue } from '../../format';
+import { hasStackableFractions, toNaturalDisplay } from '../../naturalDisplay';
+import { prefersDecimalOutput, prefersMathInput } from '../../settings';
 import { t } from '../../../i18n/strings';
 import { toReal } from '../../../math/ast';
 
@@ -31,11 +33,27 @@ export function getCalculateDisplay(state: CalculateState, ctx: KeyContext): Dis
     return { lines, showShift: ctx.shiftActive, showAlpha: ctx.alphaActive };
   }
   const expr = state.expression || '0';
-  const cursor = Math.min(state.cursorPos, expr.length);
-  const withCursor = `${expr.slice(0, cursor)}▌${expr.slice(cursor)}`;
-  lines.push({ text: withCursor, align: 'right' });
+  if (prefersMathInput(ctx.settings)) {
+    const text = toNaturalDisplay(expr);
+    lines.push({
+      text,
+      align: 'right',
+      natural: hasStackableFractions(expr),
+    });
+  } else {
+    const cursor = Math.min(state.cursorPos, expr.length);
+    const withCursor = `${expr.slice(0, cursor)}▌${expr.slice(cursor)}`;
+    lines.push({ text: withCursor, align: 'right' });
+  }
   if (state.showResult && state.result) {
-    lines.push({ text: state.result, align: 'right', size: 'large' });
+    const mathOut = prefersMathInput(ctx.settings) && !prefersDecimalOutput(ctx.settings);
+    const text = mathOut ? toNaturalDisplay(state.result) : state.result;
+    lines.push({
+      text,
+      align: 'right',
+      size: 'large',
+      natural: mathOut && hasStackableFractions(state.result),
+    });
   }
   return { lines, showShift: ctx.shiftActive, showAlpha: ctx.alphaActive };
 }
@@ -46,7 +64,7 @@ const KEY_INSERT: Partial<Record<KeyId, string>> = {
   DOT: '.', PLUS: '+', MINUS: '-', MULT: '×', DIV: '÷',
   LPAREN: '(', RPAREN: ')', POWER: '^', SQUARE: '^2',
   SIN: 'sin(', COS: 'cos(', TAN: 'tan(', LOG: 'log(',
-  SQRT: 'sqrt(', X: 'x', ANS: 'Ans', FRAC: '/', EXP10: '*10^',
+  SQRT: 'sqrt(', X: 'x', ANS: 'Ans', EXP10: '*10^',
   FUNCTION: 'f(',
 };
 
@@ -54,7 +72,7 @@ const SHIFT_INSERT: Partial<Record<KeyId, string>> = {
   SQRT: 'root(', POWER: '^(-1)', SQUARE: 'log(',
   LOG: 'ln(', ANS: 'PreAns', SIN: 'asin(', COS: 'acos(', TAN: 'atan(',
   SEVEN: 'pi', EIGHT: 'e', NINE: 'i',
-  LPAREN: '=', RPAREN: ',', FRAC: '0.', FUNCTION: 'd(',
+  RPAREN: ',', FUNCTION: 'd(',
   DIV: '%', MINUS: '(-', PLUS: 'dms(',
 };
 
@@ -162,7 +180,7 @@ export function handleCalculateKey(
     return { state: { ...state, expression: text, cursorPos: cursor, showResult: false }, result: { handled: true } };
   }
 
-  if (key === 'EXE') {
+  if (key === 'EXE' || (key === 'LPAREN' && ctx.shiftActive)) {
     try {
       const value = evaluate(state.expression || 'Ans', evalCtx(ctx));
       const formatted = formatValue(value, ctx.settings);
@@ -173,12 +191,16 @@ export function handleCalculateKey(
         state: { ...state, result: formatted, showResult: true, historyIndex: -1 },
         result: {
           handled: true,
+          consumeShift: key === 'LPAREN',
           setAns: value,
           addHistory: { expression: state.expression, result: formatted, value: num },
         },
       };
     } catch {
-      return { state: { ...state, result: 'Math ERROR', showResult: true }, result: { handled: true } };
+      return {
+        state: { ...state, result: 'Math ERROR', showResult: true },
+        result: { handled: true, consumeShift: key === 'LPAREN' },
+      };
     }
   }
 
@@ -194,6 +216,24 @@ export function handleCalculateKey(
   }
   if (key === 'RIGHT') {
     return { state: { ...state, cursorPos: Math.min(state.expression.length, state.cursorPos + 1) }, result: { handled: true } };
+  }
+
+  if (key === 'FRAC' && ctx.shiftActive) {
+    const { text, cursor } = insertAtCursor(state.expression, '.{', state.cursorPos, false);
+    return {
+      state: { ...state, expression: text, cursorPos: cursor, showResult: false },
+      result: { handled: true, consumeShift: true },
+    };
+  }
+
+  if (key === 'FRAC' && !ctx.alphaActive) {
+    const template = '(0)/(0)';
+    const pos = state.cursorPos;
+    const { text } = insertAtCursor(state.expression, template, pos, false);
+    return {
+      state: { ...state, expression: text, cursorPos: pos + 1, showResult: false },
+      result: { handled: true },
+    };
   }
 
   const insertMap = ctx.alphaActive ? ALPHA_INSERT : ctx.shiftActive ? SHIFT_INSERT : KEY_INSERT;
