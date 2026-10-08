@@ -1,5 +1,15 @@
 import type { DisplayState, KeyContext, KeyId, MatrixAppState, ModeResult } from '../../types';
-import { det, formatMatrix, identity, inverse, matAdd, matMul, matSub, trace } from '../../../math/matrix';
+import { det, identity, inverse, matAdd, matMul, matSub, trace, transpose, type Matrix } from '../../../math/matrix';
+import { formatNumber } from '../../format';
+import { prefersMathInput } from '../../settings';
+
+type MatName = MatrixAppState['target'];
+type MatOp = MatrixAppState['op'];
+
+const OPS: MatOp[] = ['det', 'inv', 'tr', 'add', 'sub', 'mul', 'trn'];
+const OP_KEYS: Partial<Record<KeyId, MatOp>> = {
+  ONE: 'det', TWO: 'inv', THREE: 'tr', FOUR: 'add', FIVE: 'sub', SIX: 'mul', SEVEN: 'trn',
+};
 
 export function createMatrixState(): MatrixAppState {
   return {
@@ -15,9 +25,30 @@ export function createMatrixState(): MatrixAppState {
   };
 }
 
+function secondOperand(target: MatName): MatName {
+  return target === 'MatB' ? 'MatA' : 'MatB';
+}
+
+function opLabel(op: MatOp, target: MatName): string {
+  const b = secondOperand(target);
+  switch (op) {
+    case 'det': return `det(${target})`;
+    case 'inv': return `${target}⁻¹`;
+    case 'tr': return `Trace(${target})`;
+    case 'add': return `${target}+${b}`;
+    case 'sub': return `${target}−${b}`;
+    case 'mul': return `${target}×${b}`;
+    case 'trn': return `Trn(${target})`;
+  }
+}
+
+function formatGrid(m: Matrix, ctx: KeyContext): string[][] {
+  return m.map((row) => row.map((v) => formatNumber(v, ctx.settings)));
+}
+
 export function getMatrixDisplay(state: MatrixAppState, ctx: KeyContext): DisplayState {
   if (state.screen === 'menu') {
-    return { lines: [{ text: 'Matrix', size: 'small' }, { text: `▶ ${state.target}` }, { text: '1:A 2:B 3:C EXE:edit', size: 'small' }] };
+    return { lines: [{ text: 'Matrix', size: 'small' }, { text: `▶ ${state.target}` }, { text: '1:A 2:B 3:C EXE:edit f(x):op', size: 'small' }] };
   }
   if (state.screen === 'size') {
     return { lines: [{ text: 'Size', size: 'small' }, { text: `${state.rows}×${state.cols}` }, { text: '▲▼ rows  ◀▶ cols', size: 'small' }] };
@@ -26,15 +57,65 @@ export function getMatrixDisplay(state: MatrixAppState, ctx: KeyContext): Displa
     const m = ctx.matrices[state.target] ?? identity(state.rows);
     return {
       lines: [
-        { text: `${state.target}[${state.editRow + 1},${state.editCol + 1}]`, size: 'small' },
-        { text: state.inputBuffer || String(m[state.editRow]?.[state.editCol] ?? 0), align: 'right' },
+        { text: `${state.target}[${state.editRow + 1},${state.editCol + 1}]= ${state.inputBuffer}`, size: 'small' },
       ],
+      gridData: formatGrid(m, ctx),
+      gridVariant: 'matrix',
+      highlightCell: { row: state.editRow, col: state.editCol },
     };
   }
   if (state.screen === 'op') {
-    return { lines: [{ text: 'Op', size: 'small' }, { text: state.op }, { text: '1:det 2:inv 3:tr 4:+ 5:- 6:×', size: 'small' }] };
+    return {
+      lines: [
+        { text: 'Op', size: 'small' },
+        { text: `▶ ${opLabel(state.op, state.target)}` },
+        { text: '1:det 2:inv 3:tr 4:+ 5:− 6:× 7:Trn', size: 'small' },
+      ],
+    };
   }
-  return { lines: state.resultText.split('\n').map((text) => ({ text })) };
+  const natural = prefersMathInput(ctx.settings);
+  if (state.resultGrid) {
+    return {
+      lines: [{ text: state.resultTitle ?? '', size: 'small' }],
+      gridData: state.resultGrid,
+      gridVariant: 'matrix',
+    };
+  }
+  return {
+    lines: [
+      { text: state.resultTitle ?? '', size: 'small' },
+      { text: state.resultText, align: 'right', size: 'large', natural },
+    ],
+  };
+}
+
+function compute(state: MatrixAppState, ctx: KeyContext): Pick<MatrixAppState, 'resultText' | 'resultTitle' | 'resultGrid'> {
+  const title = opLabel(state.op, state.target);
+  const a = ctx.matrices[state.target];
+  const bName = secondOperand(state.target);
+  const b = ctx.matrices[bName];
+  const missing = (name: MatName) => (ctx.language === 'vi' ? `Chưa nhập ${name}` : `${name} not set`);
+  if (!a) return { resultTitle: title, resultText: missing(state.target), resultGrid: undefined };
+  const binary = state.op === 'add' || state.op === 'sub' || state.op === 'mul';
+  if (binary && !b) return { resultTitle: title, resultText: missing(bName), resultGrid: undefined };
+
+  try {
+    const scalar = (v: number) => ({ resultTitle: title, resultText: formatNumber(v, ctx.settings), resultGrid: undefined });
+    const grid = (m: Matrix) => ({ resultTitle: title, resultText: '', resultGrid: formatGrid(m, ctx) });
+    switch (state.op) {
+      case 'det': return scalar(det(a));
+      case 'tr': return scalar(trace(a));
+      case 'inv': return grid(inverse(a));
+      case 'trn': return grid(transpose(a));
+      case 'add': return grid(matAdd(a, b!));
+      case 'sub': return grid(matSub(a, b!));
+      case 'mul': return grid(matMul(a, b!));
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '';
+    const dimension = /mismatch|square/i.test(message);
+    return { resultTitle: title, resultText: dimension ? 'Dimension ERROR' : 'Math ERROR', resultGrid: undefined };
+  }
 }
 
 export function handleMatrixKey(
@@ -77,9 +158,17 @@ export function handleMatrixKey(
     if (key === 'DEL') return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
     if (nums[key]) return { state: { ...state, inputBuffer: state.inputBuffer + nums[key] }, result: { handled: true } };
     if (key === 'MINUS' && !state.inputBuffer) return { state: { ...state, inputBuffer: '-' }, result: { handled: true } };
+    if (key === 'LEFT' || key === 'UP') {
+      let r = state.editRow;
+      let c = state.editCol - 1;
+      if (c < 0) { c = state.cols - 1; r = Math.max(0, r - 1); }
+      if (state.editRow === 0 && state.editCol === 0) { r = 0; c = 0; }
+      return { state: { ...state, editRow: r, editCol: c, inputBuffer: '' }, result: { handled: true } };
+    }
     if (key === 'EXE' || key === 'RIGHT' || key === 'DOWN') {
       const m = (ctx.matrices[state.target] ?? identity(state.rows)).map((r) => [...r]);
-      m[state.editRow][state.editCol] = parseFloat(state.inputBuffer || String(m[state.editRow][state.editCol]));
+      const typed = parseFloat(state.inputBuffer);
+      if (state.inputBuffer && Number.isFinite(typed)) m[state.editRow][state.editCol] = typed;
       let r = state.editRow;
       let c = state.editCol + 1;
       if (c >= state.cols) { c = 0; r++; }
@@ -98,32 +187,20 @@ export function handleMatrixKey(
   }
 
   if (state.screen === 'op') {
-    if (key === 'ONE') return { state: { ...state, op: 'det' }, result: { handled: true } };
-    if (key === 'TWO') return { state: { ...state, op: 'inv' }, result: { handled: true } };
-    if (key === 'THREE') return { state: { ...state, op: 'tr' }, result: { handled: true } };
-    if (key === 'FOUR') return { state: { ...state, op: 'add' }, result: { handled: true } };
-    if (key === 'FIVE') return { state: { ...state, op: 'sub' }, result: { handled: true } };
-    if (key === 'SIX') return { state: { ...state, op: 'mul' }, result: { handled: true } };
-    if (key === 'EXE') {
-      try {
-        const a = ctx.matrices[state.target];
-        const b = ctx.matrices.MatB;
-        if (!a) throw new Error('empty');
-        let resultText = '';
-        if (state.op === 'det') resultText = String(parseFloat(det(a).toPrecision(8)));
-        if (state.op === 'inv') resultText = formatMatrix(inverse(a));
-        if (state.op === 'tr') resultText = String(parseFloat(trace(a).toPrecision(8)));
-        if (state.op === 'add' && b) resultText = formatMatrix(matAdd(a, b));
-        if (state.op === 'sub' && b) resultText = formatMatrix(matSub(a, b));
-        if (state.op === 'mul' && b) resultText = formatMatrix(matMul(a, b));
-        return { state: { ...state, screen: 'result', resultText }, result: { handled: true } };
-      } catch {
-        return { state: { ...state, screen: 'result', resultText: 'Math ERROR' }, result: { handled: true } };
-      }
+    const picked = OP_KEYS[key];
+    if (picked) return { state: { ...state, op: picked }, result: { handled: true } };
+    if (key === 'UP' || key === 'DOWN') {
+      const i = OPS.indexOf(state.op);
+      const op = OPS[(i + (key === 'DOWN' ? 1 : -1) + OPS.length) % OPS.length];
+      return { state: { ...state, op }, result: { handled: true } };
     }
+    if (key === 'EXE') {
+      return { state: { ...state, screen: 'result', ...compute(state, ctx) }, result: { handled: true } };
+    }
+    if (key === 'EXIT') return { state: { ...state, screen: 'menu' }, result: { handled: true } };
   }
 
-  if (state.screen === 'result' && key === 'EXIT') {
+  if (state.screen === 'result' && (key === 'EXIT' || key === 'EXE')) {
     return { state: { ...state, screen: 'op' }, result: { handled: true } };
   }
   return { state, result: { handled: false } };

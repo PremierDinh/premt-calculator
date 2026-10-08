@@ -1,9 +1,11 @@
 import type { DisplayState, KeyContext, KeyId, ModeResult, StatisticsState } from '../../types';
-import type { CalculatorSettings } from '../../settings';
+import { DEFAULT_SETTINGS, prefersMathInput, type CalculatorSettings } from '../../settings';
 import { formatNumber } from '../../format';
 
-const CALC_OPTIONS_1VAR = ['n', 'Σx', 'x̄', 'σx', 'σ', 'minX', 'maxX', 'Med', 'Q1', 'Q3'];
-const CALC_OPTIONS_2VAR = ['n', 'Σx', 'Σy', 'x̄', 'ȳ', 'A', 'B', 'r', 'ŷ'];
+export const CALC_OPTIONS_1VAR = ['n', 'x̄', 'Σx', 'Σx²', 'σx', 'sx', 'minX', 'Q1', 'Med', 'Q3', 'maxX'];
+export const CALC_OPTIONS_2VAR = ['n', 'x̄', 'ȳ', 'Σx', 'Σy', 'Σxy', 'σx', 'σy', 'a', 'b', 'r'];
+
+const VISIBLE_RESULTS = 3;
 
 export function createStatisticsState(): StatisticsState {
   return {
@@ -26,125 +28,167 @@ function expandedData(data: StatisticsState['data']): number[] {
   return result;
 }
 
-function percentile(sorted: number[], p: number): number {
+function median(sorted: number[]): number {
   const n = sorted.length;
   if (n === 0) return NaN;
-  if (n === 1) return sorted[0];
-  const pos = (n - 1) * p;
-  const lo = Math.floor(pos);
-  const hi = Math.ceil(pos);
-  if (lo === hi) return sorted[lo];
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  const mid = Math.floor(n / 2);
+  return n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function median(sorted: number[]): number {
-  return percentile(sorted, 0.5);
+/** Quartiles as on Casio calculators: medians of the lower/upper halves, excluding the middle value when n is odd. */
+function quartiles(sorted: number[]): { q1: number; q3: number } {
+  const n = sorted.length;
+  if (n === 1) return { q1: sorted[0], q3: sorted[0] };
+  const half = Math.floor(n / 2);
+  return { q1: median(sorted.slice(0, half)), q3: median(sorted.slice(n - half)) };
 }
 
-function compute1Var(data: StatisticsState['data'], calc: string, settings: CalculatorSettings): string {
+export function compute1Var(data: StatisticsState['data'], calc: string): number {
   const xs = expandedData(data);
   const n = xs.length;
-  if (n === 0) return 'Data ERROR';
-
+  if (n === 0) return NaN;
   const sum = xs.reduce((a, b) => a + b, 0);
   const mean = sum / n;
-  const variance = xs.reduce((a, x) => a + (x - mean) ** 2, 0) / n;
-  const std = Math.sqrt(variance);
+  const ss = xs.reduce((a, x) => a + (x - mean) ** 2, 0);
   const sorted = [...xs].sort((a, b) => a - b);
-
   switch (calc) {
-    case 'n': return String(n);
-    case 'Σx': return formatNumber(sum, settings);
-    case 'x̄': return formatNumber(mean, settings);
-    case 'σx': return formatNumber(std, settings);
-    case 'σ': return formatNumber(Math.sqrt(variance * n / (n - 1 || 1)), settings);
-    case 'minX': return formatNumber(sorted[0], settings);
-    case 'maxX': return formatNumber(sorted[n - 1], settings);
-    case 'Med': return formatNumber(median(sorted), settings);
-    case 'Q1': return formatNumber(percentile(sorted, 0.25), settings);
-    case 'Q3': return formatNumber(percentile(sorted, 0.75), settings);
-    default: return '—';
+    case 'n': return n;
+    case 'x̄': return mean;
+    case 'Σx': return sum;
+    case 'Σx²': return xs.reduce((a, x) => a + x * x, 0);
+    case 'σx': return Math.sqrt(ss / n);
+    case 'sx': return n > 1 ? Math.sqrt(ss / (n - 1)) : NaN;
+    case 'minX': return sorted[0];
+    case 'Q1': return quartiles(sorted).q1;
+    case 'Med': return median(sorted);
+    case 'Q3': return quartiles(sorted).q3;
+    case 'maxX': return sorted[n - 1];
+    default: return NaN;
   }
 }
 
-function compute2Var(data: StatisticsState['data'], calc: string, settings: CalculatorSettings): string {
+export function compute2Var(data: StatisticsState['data'], calc: string): number {
   const rows = data.filter((r) => r.y !== undefined);
   const n = rows.reduce((a, r) => a + r.freq, 0);
-  if (n === 0) return 'Data ERROR';
+  if (n === 0) return NaN;
 
   let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
   for (const r of rows) {
+    const y = r.y ?? 0;
     sumX += r.x * r.freq;
-    sumY += (r.y ?? 0) * r.freq;
-    sumXY += r.x * (r.y ?? 0) * r.freq;
+    sumY += y * r.freq;
+    sumXY += r.x * y * r.freq;
     sumX2 += r.x * r.x * r.freq;
-    sumY2 += (r.y ?? 0) * (r.y ?? 0) * r.freq;
+    sumY2 += y * y * r.freq;
   }
 
   const meanX = sumX / n;
   const meanY = sumY / n;
-  const b = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-  const a = meanY - b * meanX;
-  const r = (n * sumXY - sumX * sumY) /
-    Math.sqrt((n * sumX2 - sumX ** 2) * (n * sumY2 - sumY ** 2));
+  const sxx = n * sumX2 - sumX ** 2;
+  const syy = n * sumY2 - sumY ** 2;
+  const sxy = n * sumXY - sumX * sumY;
+  const b = sxy / sxx;
 
   switch (calc) {
-    case 'n': return String(n);
-    case 'Σx': return formatNumber(sumX, settings);
-    case 'Σy': return formatNumber(sumY, settings);
-    case 'x̄': return formatNumber(meanX, settings);
-    case 'ȳ': return formatNumber(meanY, settings);
-    case 'A': return formatNumber(a, settings);
-    case 'B': return formatNumber(b, settings);
-    case 'r': return formatNumber(r, settings);
-    case 'ŷ': return formatNumber(a + b * meanX, settings);
-    default: return '—';
+    case 'n': return n;
+    case 'x̄': return meanX;
+    case 'ȳ': return meanY;
+    case 'Σx': return sumX;
+    case 'Σy': return sumY;
+    case 'Σxy': return sumXY;
+    case 'σx': return Math.sqrt(sxx) / n;
+    case 'σy': return Math.sqrt(syy) / n;
+    case 'a': return meanY - b * meanX;
+    case 'b': return b;
+    case 'r': return sxy / Math.sqrt(sxx * syy);
+    default: return NaN;
   }
 }
 
-export function getStatisticsDisplay(state: StatisticsState): DisplayState {
+function computeValue(state: StatisticsState, calc: string): number {
+  return state.dataType === '1-var' ? compute1Var(state.data, calc) : compute2Var(state.data, calc);
+}
+
+function formatStat(value: number, settings: CalculatorSettings): string {
+  return Number.isFinite(value) ? formatNumber(value, settings) : 'ERROR';
+}
+
+function completeRows(state: StatisticsState): number {
+  return state.data.filter((r) => state.dataType === '1-var' || r.y !== undefined).length;
+}
+
+export function getStatisticsDisplay(state: StatisticsState, settings: CalculatorSettings = DEFAULT_SETTINGS): DisplayState {
+  const natural = prefersMathInput(settings);
+  const title = state.dataType === '1-var' ? '1-Var' : '2-Var';
   switch (state.screen) {
     case 'menu':
-      return {
-        lines: [
-          { text: 'Statistics', size: 'small' },
-          { text: '1: 1-Variable' },
-          { text: '2: 2-Variable' },
-        ],
-        title: 'Statistics',
-      };
     case 'type-select':
       return {
         lines: [
-          { text: state.dataType === '1-var' ? '1-Variable Data' : '2-Variable Data' },
-          { text: `Entries: ${state.data.length}` },
+          { text: 'Statistics', size: 'small' },
+          { text: '1: 1-Variable (x)' },
+          { text: '2: 2-Variable (x,y)  y=a+bx' },
         ],
+        title: 'Statistics',
       };
-    case 'data-input':
+    case 'data-input': {
+      const row = completeRows(state) + 1;
+      const field = state.inputField === 'y' ? 'y' : 'x';
+      const recent = state.data.slice(-2);
+      const header = state.dataType === '1-var' ? ['#', 'x'] : ['#', 'x', 'y'];
+      const firstIndex = state.data.length - recent.length + 1;
+      const rows = recent.map((r, i) => {
+        const cells = [String(firstIndex + i), formatNumber(r.x, settings)];
+        if (state.dataType === '2-var') cells.push(r.y === undefined ? '' : formatNumber(r.y, settings));
+        return cells;
+      });
       return {
         lines: [
-          { text: `Input ${state.inputField.toUpperCase()}:`, size: 'small' },
-          { text: state.inputBuffer || '0', align: 'right' },
-          { text: `Row ${state.data.length + (state.inputField === 'x' ? 1 : 0)}`, size: 'small' },
+          { text: `${title}  n=${completeRows(state)}  f(x):CALC`, size: 'small' },
+          { text: `${field}${row}= ${state.inputBuffer}`, align: 'right' },
         ],
+        ...(rows.length ? { gridData: [header, ...rows], gridVariant: 'table' as const } : {}),
       };
-    case 'calc-menu':
+    }
+    case 'calc-menu': {
+      const start = Math.min(
+        Math.max(0, state.selectedCalc - 1),
+        Math.max(0, state.calcOptions.length - VISIBLE_RESULTS),
+      );
+      const visible = state.calcOptions.slice(start, start + VISIBLE_RESULTS);
       return {
         lines: [
-          { text: 'CALC', size: 'small' },
-          { text: `▶ ${state.calcOptions[state.selectedCalc]}` },
+          { text: `${title}  ▲▼  EXE:Ans`, size: 'small' },
+          ...visible.map((calc, i) => ({
+            text: `${start + i === state.selectedCalc ? '▶' : ' '}${calc}=${formatStat(computeValue(state, calc), settings)}`,
+            natural,
+          })),
         ],
       };
+    }
     case 'result':
       return {
         lines: [
           { text: state.calcOptions[state.selectedCalc], size: 'small' },
-          { text: state.resultText, align: 'right', size: 'large' },
+          { text: state.resultText, align: 'right', size: 'large', natural },
         ],
       };
     default:
       return { lines: [{ text: 'Statistics' }] };
   }
+}
+
+function startInput(state: StatisticsState, dataType: StatisticsState['dataType']): StatisticsState {
+  return {
+    ...state,
+    screen: 'data-input',
+    dataType,
+    data: dataType === state.dataType ? state.data : [],
+    calcOptions: dataType === '1-var' ? CALC_OPTIONS_1VAR : CALC_OPTIONS_2VAR,
+    selectedCalc: 0,
+    inputBuffer: '',
+    inputField: 'x',
+  };
 }
 
 export function handleStatisticsKey(
@@ -156,117 +200,62 @@ export function handleStatisticsKey(
     ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
     FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
   };
+  const handled = (next: StatisticsState, extra: Partial<ModeResult> = {}) => ({ state: next, result: { handled: true, ...extra } });
 
-  if (key === 'AC') {
-    return { state: createStatisticsState(), result: { handled: true } };
-  }
+  if (key === 'AC') return handled(createStatisticsState());
 
-  if (state.screen === 'menu') {
-    if (key === 'ONE') {
-      return {
-        state: { ...state, screen: 'type-select', dataType: '1-var', data: [], calcOptions: CALC_OPTIONS_1VAR },
-        result: { handled: true },
-      };
-    }
-    if (key === 'TWO') {
-      return {
-        state: { ...state, screen: 'type-select', dataType: '2-var', data: [], calcOptions: CALC_OPTIONS_2VAR },
-        result: { handled: true },
-      };
-    }
-    if (key === 'EXE') {
-      return {
-        state: { ...state, screen: 'data-input', inputBuffer: '', inputField: 'x' },
-        result: { handled: true },
-      };
-    }
-  }
-
-  if (state.screen === 'type-select') {
-    if (key === 'EXE') {
-      return {
-        state: { ...state, screen: 'data-input', inputBuffer: '', inputField: 'x' },
-        result: { handled: true },
-      };
-    }
-    if (key === 'FUNCTION') {
-      return {
-        state: { ...state, screen: 'calc-menu', selectedCalc: 0 },
-        result: { handled: true },
-      };
-    }
+  if (state.screen === 'menu' || state.screen === 'type-select') {
+    if (key === 'ONE') return handled(startInput(state, '1-var'));
+    if (key === 'TWO') return handled(startInput(state, '2-var'));
+    if (key === 'EXE' || key === 'OK') return handled(startInput(state, state.dataType));
   }
 
   if (state.screen === 'data-input') {
     if (key === 'DEL') {
-      return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
+      if (state.inputBuffer) return handled({ ...state, inputBuffer: state.inputBuffer.slice(0, -1) });
+      if (state.inputField === 'y') return handled({ ...state, data: state.data.slice(0, -1), inputField: 'x' });
+      return handled({ ...state, data: state.data.slice(0, -1) });
     }
-    if (numKeys[key]) {
-      return { state: { ...state, inputBuffer: state.inputBuffer + numKeys[key] }, result: { handled: true } };
-    }
-    if (key === 'MINUS' && state.inputBuffer === '') {
-      return { state: { ...state, inputBuffer: '-' }, result: { handled: true } };
-    }
+    if (numKeys[key]) return handled({ ...state, inputBuffer: state.inputBuffer + numKeys[key] });
+    if (key === 'MINUS' && state.inputBuffer === '') return handled({ ...state, inputBuffer: '-' });
     if (key === 'EXE') {
-      const val = parseFloat(state.inputBuffer) || 0;
-      if (state.dataType === '2-var' && state.inputField === 'x') {
-        return {
-          state: { ...state, inputField: 'y', inputBuffer: '', data: [...state.data, { x: val, y: 0, freq: 1 }] },
-          result: { handled: true },
-        };
-      }
+      if (!state.inputBuffer) return handled(state);
+      const val = parseFloat(state.inputBuffer);
+      if (!Number.isFinite(val)) return handled({ ...state, inputBuffer: '' });
       if (state.dataType === '2-var' && state.inputField === 'y') {
         const data = [...state.data];
-        if (data.length > 0) data[data.length - 1] = { ...data[data.length - 1], y: val };
-        return {
-          state: { ...state, inputField: 'freq', inputBuffer: '', data },
-          result: { handled: true },
-        };
+        data[data.length - 1] = { ...data[data.length - 1], y: val };
+        return handled({ ...state, data, inputField: 'x', inputBuffer: '' });
       }
-      if (state.inputField === 'freq') {
-        const data = [...state.data];
-        const freq = Math.max(1, Math.round(val) || 1);
-        if (data.length > 0) data[data.length - 1] = { ...data[data.length - 1], freq };
-        return {
-          state: { ...state, inputField: 'x', inputBuffer: '', data },
-          result: { handled: true },
-        };
-      }
-      return {
-        state: {
-          ...state,
-          data: [...state.data, { x: val, freq: 1 }],
-          inputBuffer: '',
-          inputField: state.dataType === '1-var' ? 'freq' : 'x',
-        },
-        result: { handled: true },
-      };
+      return handled({
+        ...state,
+        data: [...state.data, { x: val, freq: 1 }],
+        inputField: state.dataType === '2-var' ? 'y' : 'x',
+        inputBuffer: '',
+      });
+    }
+    if (key === 'FUNCTION' || key === 'OK') {
+      const data = state.inputField === 'y' ? state.data.slice(0, -1) : state.data;
+      if (!data.length) return handled(state);
+      return handled({ ...state, data, inputField: 'x', inputBuffer: '', screen: 'calc-menu' });
     }
   }
 
   if (state.screen === 'calc-menu') {
-    if (key === 'UP') {
-      const sel = Math.max(0, state.selectedCalc - 1);
-      return { state: { ...state, selectedCalc: sel }, result: { handled: true } };
+    if (key === 'UP') return handled({ ...state, selectedCalc: Math.max(0, state.selectedCalc - 1) });
+    if (key === 'DOWN') return handled({ ...state, selectedCalc: Math.min(state.calcOptions.length - 1, state.selectedCalc + 1) });
+    if (key === 'EXE' || key === 'OK') {
+      const value = computeValue(state, state.calcOptions[state.selectedCalc]);
+      return handled(
+        { ...state, screen: 'result', resultText: formatStat(value, ctx.settings) },
+        Number.isFinite(value) ? { setAns: value } : {},
+      );
     }
-    if (key === 'DOWN') {
-      const sel = Math.min(state.calcOptions.length - 1, state.selectedCalc + 1);
-      return { state: { ...state, selectedCalc: sel }, result: { handled: true } };
-    }
-    if (key === 'EXE') {
-      const calc = state.calcOptions[state.selectedCalc];
-      const resultText = state.dataType === '1-var'
-        ? compute1Var(state.data, calc, ctx.settings)
-        : compute2Var(state.data, calc, ctx.settings);
-      return {
-        state: { ...state, screen: 'result', resultText },
-        result: { handled: true },
-      };
-    }
+    if (key === 'EXIT') return handled({ ...state, screen: 'data-input' });
   }
 
-  if (state.screen === 'result' && key === 'EXIT') {
-    return { state: { ...state, screen: 'calc-menu' }, result: { handled: true } };
+  if (state.screen === 'result' && (key === 'EXIT' || key === 'EXE')) {
+    return handled({ ...state, screen: 'calc-menu' });
   }
 
   return { state, result: { handled: false } };

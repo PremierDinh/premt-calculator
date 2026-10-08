@@ -2,12 +2,46 @@ import type { CalculateState, DisplayState, KeyContext, KeyId, ModeResult, Varia
 import { deleteAtCursor, insertAtCursor } from '../../../math/expression';
 import { createEvalContext, evaluate } from '../../../math/evaluator';
 import { formatValue } from '../../format';
-import { hasStackableFractions, toNaturalDisplay } from '../../naturalDisplay';
+import { CURSOR_MARK, toNaturalDisplay } from '../../naturalDisplay';
 import { prefersDecimalOutput, prefersMathInput } from '../../settings';
 import { t } from '../../../i18n/strings';
 import { toReal } from '../../../math/ast';
 
 const VARS: VariableName[] = ['A', 'B', 'C', 'D', 'E', 'F', 'x', 'y', 'z'];
+const FRAC_JOIN = ')/(';
+const EMPTY_FRAC = `(${FRAC_JOIN})`;
+
+/** After a result, an operator continues from Ans while anything else starts a fresh expression. */
+export function continueFromResult(insert: string): { expression: string; cursorPos: number } {
+  return /^[+\-×÷*/^%]/.test(insert) ? { expression: 'Ans', cursorPos: 3 } : { expression: '', cursorPos: 0 };
+}
+
+/** Index of the "(" matching the ")" that ends `text`, or -1. */
+function openingParenOfTrailingGroup(text: string): number {
+  if (!text.endsWith(')')) return -1;
+  let depth = 0;
+  for (let i = text.length - 1; i >= 0; i--) {
+    if (text[i] === ')') depth++;
+    else if (text[i] === '(' && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/** a/b key: a number or bracketed group right before the cursor becomes the numerator, as on ClassWiz. */
+function insertFraction(expression: string, pos: number): { text: string; cursor: number } {
+  const before = expression.slice(0, pos);
+  const after = expression.slice(pos);
+  const number = before.match(/(?:\d+\.?\d*|\.\d+)$/);
+  if (number) {
+    const start = pos - number[0].length;
+    return { text: `${before.slice(0, start)}(${number[0]}${FRAC_JOIN})${after}`, cursor: pos + 4 };
+  }
+  const open = openingParenOfTrailingGroup(before);
+  if (open >= 0 && before[open - 1] !== '/' && !/[A-Za-z]/.test(before[open - 1] ?? '')) {
+    return { text: `${before}/()${after}`, cursor: pos + 2 };
+  }
+  return { text: `${before}${EMPTY_FRAC}${after}`, cursor: pos + 1 };
+}
 
 export function createCalculateState(): CalculateState {
   return {
@@ -34,12 +68,11 @@ export function getCalculateDisplay(state: CalculateState, ctx: KeyContext): Dis
   }
   const expr = state.expression || '0';
   if (prefersMathInput(ctx.settings)) {
-    const text = toNaturalDisplay(expr);
-    lines.push({
-      text,
-      align: 'right',
-      natural: hasStackableFractions(expr),
-    });
+    const cursor = Math.min(state.cursorPos, state.expression.length);
+    const text = state.showResult || !state.expression
+      ? toNaturalDisplay(expr)
+      : `${toNaturalDisplay(state.expression.slice(0, cursor))}${CURSOR_MARK}${toNaturalDisplay(state.expression.slice(cursor))}`;
+    lines.push({ text, align: 'right', natural: true });
   } else {
     const cursor = Math.min(state.cursorPos, expr.length);
     const withCursor = `${expr.slice(0, cursor)}▌${expr.slice(cursor)}`;
@@ -52,7 +85,7 @@ export function getCalculateDisplay(state: CalculateState, ctx: KeyContext): Dis
       text,
       align: 'right',
       size: 'large',
-      natural: mathOut && hasStackableFractions(state.result),
+      natural: mathOut,
     });
   }
   return { lines, showShift: ctx.shiftActive, showAlpha: ctx.alphaActive };
@@ -176,7 +209,18 @@ export function handleCalculateKey(
   }
 
   if (key === 'DEL') {
-    const { text, cursor } = deleteAtCursor(state.expression, state.cursorPos);
+    const pos = state.cursorPos;
+    const expr = state.expression;
+    if (expr.slice(pos - 1, pos + 4) === EMPTY_FRAC) {
+      return {
+        state: { ...state, expression: expr.slice(0, pos - 1) + expr.slice(pos + 4), cursorPos: pos - 1, showResult: false },
+        result: { handled: true },
+      };
+    }
+    if (expr.slice(pos - 3, pos) === FRAC_JOIN) {
+      return { state: { ...state, cursorPos: pos - 3 }, result: { handled: true } };
+    }
+    const { text, cursor } = deleteAtCursor(expr, pos);
     return { state: { ...state, expression: text, cursorPos: cursor, showResult: false }, result: { handled: true } };
   }
 
@@ -212,10 +256,14 @@ export function handleCalculateKey(
   }
 
   if (key === 'LEFT') {
-    return { state: { ...state, cursorPos: Math.max(0, state.cursorPos - 1) }, result: { handled: true } };
+    const pos = state.cursorPos;
+    const step = state.expression.slice(Math.max(0, pos - 3), pos) === FRAC_JOIN ? 3 : 1;
+    return { state: { ...state, cursorPos: Math.max(0, pos - step) }, result: { handled: true } };
   }
   if (key === 'RIGHT') {
-    return { state: { ...state, cursorPos: Math.min(state.expression.length, state.cursorPos + 1) }, result: { handled: true } };
+    const pos = state.cursorPos;
+    const step = state.expression.slice(pos, pos + 3) === FRAC_JOIN ? 3 : 1;
+    return { state: { ...state, cursorPos: Math.min(state.expression.length, pos + step) }, result: { handled: true } };
   }
 
   if (key === 'FRAC' && ctx.shiftActive) {
@@ -227,11 +275,10 @@ export function handleCalculateKey(
   }
 
   if (key === 'FRAC' && !ctx.alphaActive) {
-    const template = '(0)/(0)';
-    const pos = state.cursorPos;
-    const { text } = insertAtCursor(state.expression, template, pos, false);
+    const base = state.showResult ? { expression: '', cursorPos: 0 } : state;
+    const { text, cursor } = insertFraction(base.expression, base.cursorPos);
     return {
-      state: { ...state, expression: text, cursorPos: pos + 1, showResult: false },
+      state: { ...state, expression: text, cursorPos: cursor, showResult: false },
       result: { handled: true },
     };
   }
@@ -239,10 +286,11 @@ export function handleCalculateKey(
   const insertMap = ctx.alphaActive ? ALPHA_INSERT : ctx.shiftActive ? SHIFT_INSERT : KEY_INSERT;
   const insert = insertMap[key];
   if (insert) {
+    const base = state.showResult ? continueFromResult(insert) : state;
     const { text, cursor } = insertAtCursor(
-      state.expression,
+      base.expression,
       insert,
-      state.cursorPos,
+      base.cursorPos,
       state.insertMode && insert.length === 1,
     );
     return {

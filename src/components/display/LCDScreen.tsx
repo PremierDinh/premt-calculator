@@ -49,18 +49,28 @@ export function LCDScreen() {
         )}
 
         {display.gridData && (
-          <div className={lcdStyles.gridPreview}>
+          <div
+            className={[
+              lcdStyles.gridPreview,
+              display.gridVariant === 'matrix' ? lcdStyles.gridMatrix : '',
+              display.gridVariant === 'table' ? lcdStyles.gridTable : '',
+            ].filter(Boolean).join(' ')}
+          >
             {display.gridData.map((row, ri) => (
-              <div key={ri} className={lcdStyles.gridRow}>
+              <div
+                key={ri}
+                className={lcdStyles.gridRow}
+                style={{ gridTemplateColumns: `repeat(${row.length}, 1fr)` }}
+              >
                 {row.map((cell, ci) => {
                   const hl = display.highlightCell;
-                  const isHl = hl && ri === (hl.row % 4) && ci === hl.col;
+                  const isHl = hl && ri === hl.row && ci === hl.col;
                   return (
                     <div
                       key={ci}
                       className={`${lcdStyles.gridCell} ${isHl ? lcdStyles.gridCellHighlight : ''}`}
                     >
-                      {cell}
+                      {display.gridVariant && display.gridVariant !== 'sheet' ? <NaturalLine text={cell} /> : cell}
                     </div>
                   );
                 })}

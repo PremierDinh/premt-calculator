@@ -1,5 +1,6 @@
 import type { DisplayState, KeyContext, KeyId, ModeResult, TableState } from '../../types';
-import { DEFAULT_SETTINGS, type CalculatorSettings } from '../../settings';
+import { DEFAULT_SETTINGS, prefersMathInput, type CalculatorSettings } from '../../settings';
+import { toNaturalDisplay } from '../../naturalDisplay';
 import { createEvalContext, evaluateFunction } from '../../../math/evaluator';
 import { formatNumber } from '../../format';
 
@@ -28,6 +29,7 @@ function evalCtx(ctx: KeyContext) {
 }
 
 const MAX_TABLE_ROWS = 50;
+const VISIBLE_ROWS = 3;
 
 function generateTable(state: TableState, ctx: KeyContext): { x: number; fx: number }[] {
   const start = parseFloat(state.start) || 0;
@@ -64,7 +66,7 @@ export function getTableDisplay(state: TableState, settings: CalculatorSettings 
       return {
         lines: [
           { text: 'f(x)=', size: 'small' },
-          { text: state.inputBuffer || state.functionExpr || '0', align: 'right' },
+          { text: toNaturalDisplay(state.inputBuffer || state.functionExpr || '0'), align: 'right', natural: prefersMathInput(settings) },
         ],
       };
     case 'start':
@@ -89,15 +91,22 @@ export function getTableDisplay(state: TableState, settings: CalculatorSettings 
         ],
       };
     case 'table': {
-      const row = state.tableData[state.scrollIndex];
-      if (!row) return { lines: [{ text: 'No data' }] };
-      const fxStr = Number.isNaN(row.fx) ? 'ERROR' : formatNumber(row.fx, settings);
+      if (!state.tableData.length) return { lines: [{ text: 'No data' }] };
+      const first = Math.min(
+        Math.max(0, state.scrollIndex - 1),
+        Math.max(0, state.tableData.length - VISIBLE_ROWS),
+      );
+      const rows = state.tableData.slice(first, first + VISIBLE_ROWS).map((row) => [
+        formatNumber(row.x, settings),
+        Number.isFinite(row.fx) ? formatNumber(row.fx, settings) : 'ERROR',
+      ]);
       return {
         lines: [
-          { text: `x=${formatNumber(row.x, settings)}`, size: 'small' },
-          { text: `f(x)=${fxStr}`, align: 'right', size: 'large' },
-          { text: `${state.scrollIndex + 1}/${state.tableData.length}`, size: 'small' },
+          { text: `f(x)=${toNaturalDisplay(state.functionExpr)}   ${state.scrollIndex + 1}/${state.tableData.length}`, size: 'small' },
         ],
+        gridData: [['x', 'f(x)'], ...rows],
+        gridVariant: 'table',
+        highlightCell: { row: state.scrollIndex - first + 1, col: 1 },
       };
     }
     default:
@@ -119,7 +128,7 @@ export function handleTableKey(
   const alphaKeys: Partial<Record<KeyId, string>> = {
     X: 'x', POWER: '^', SQUARE: '²', SQRT: '√(',
     SIN: 'sin(', COS: 'cos(', TAN: 'tan(',
-    PLUS: '+', MINUS: '-', MULT: '*', DIV: '/',
+    PLUS: '+', MINUS: '-', MULT: '×', DIV: '÷',
     LPAREN: '(', RPAREN: ')',
   };
 
@@ -142,7 +151,7 @@ export function handleTableKey(
       };
     }
     if (key === 'EXIT') {
-      return { state: { ...state, screen: 'step', inputBuffer: state.step }, result: { handled: true } };
+      return { state: { ...state, screen: 'step', inputBuffer: '' }, result: { handled: true } };
     }
     return { state, result: { handled: true } };
   }
@@ -167,19 +176,19 @@ export function handleTableKey(
     const val = state.inputBuffer;
     if (state.screen === 'func') {
       return {
-        state: { ...state, functionExpr: val || state.functionExpr, screen: 'start', inputBuffer: state.start },
+        state: { ...state, functionExpr: val || state.functionExpr, screen: 'start', inputBuffer: '' },
         result: { handled: true },
       };
     }
     if (state.screen === 'start') {
       return {
-        state: { ...state, start: val || state.start, screen: 'end', inputBuffer: state.end },
+        state: { ...state, start: val || state.start, screen: 'end', inputBuffer: '' },
         result: { handled: true },
       };
     }
     if (state.screen === 'end') {
       return {
-        state: { ...state, end: val || state.end, screen: 'step', inputBuffer: state.step },
+        state: { ...state, end: val || state.end, screen: 'step', inputBuffer: '' },
         result: { handled: true },
       };
     }

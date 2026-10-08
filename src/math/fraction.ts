@@ -42,27 +42,31 @@ export function divFrac(a: Fraction, b: Fraction): Fraction {
   return simplify({ num: a.num * b.den, den: a.den * b.num });
 }
 
-export function toFraction(value: number, maxDen = 10000): Fraction | null {
+export function toFraction(value: number, maxDen = 10000, relTol = 1e-10): Fraction | null {
   if (!Number.isFinite(value)) return null;
-  if (Math.abs(value - Math.round(value)) < 1e-12) {
-    return { num: Math.round(value), den: 1 };
+  const sign = value < 0 ? -1 : 1;
+  const x = Math.abs(value);
+  const tol = relTol * Math.max(1, x);
+  if (x > Number.MAX_SAFE_INTEGER) return null;
+  if (Math.abs(x - Math.round(x)) <= tol) return { num: sign * Math.round(x), den: 1 };
+
+  // Continued-fraction convergents: h/k are the best rational approximations for each denominator size.
+  let h = 1, hPrev = 0;
+  let k = 0, kPrev = 1;
+  let y = x;
+  for (let i = 0; i < 64; i++) {
+    const a = Math.floor(y);
+    const hNext = a * h + hPrev;
+    const kNext = a * k + kPrev;
+    if (kNext > maxDen) break;
+    hPrev = h; h = hNext;
+    kPrev = k; k = kNext;
+    if (Math.abs(x - h / k) <= tol) return simplify({ num: sign * h, den: k });
+    const rest = y - a;
+    if (rest < 1e-15) break;
+    y = 1 / rest;
   }
-
-  let best: Fraction = { num: Math.round(value), den: 1 };
-  let bestErr = Math.abs(value - best.num);
-
-  for (let den = 1; den <= maxDen; den++) {
-    const num = Math.round(value * den);
-    const err = Math.abs(value - num / den);
-    if (err < bestErr) {
-      best = { num, den };
-      bestErr = err;
-    }
-    if (bestErr < 1e-12) break;
-  }
-
-  if (bestErr > 1e-8) return null;
-  return simplify(best);
+  return null;
 }
 
 export function toMixed(frac: Fraction): { whole: number; num: number; den: number } {

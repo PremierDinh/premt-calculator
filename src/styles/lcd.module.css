@@ -121,6 +121,40 @@
   white-space: nowrap;
 }
 
+.gridMatrix,
+.gridTable {
+  border-top: none;
+  margin-top: 2px;
+  padding-top: 0;
+}
+
+.gridMatrix {
+  align-self: center;
+  border-left: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.gridMatrix .gridRow,
+.gridTable .gridRow {
+  font-size: 15px;
+  gap: 4px 12px;
+}
+
+.gridMatrix .gridCell,
+.gridTable .gridCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.4em;
+}
+
+.gridTable .gridRow:first-child {
+  font-size: 11px;
+  border-bottom: 1px solid #a8aea0;
+}
+
 .gridCellHighlight {
   background: rgba(37, 99, 235, 0.25);
   border-radius: 2px;
@@ -174,8 +208,68 @@
 
 .fracNum,
 .fracDen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.72em;
   padding: 0 2px;
+}
+
+.fracNum .fracNum,
+.fracNum .fracDen,
+.fracDen .fracNum,
+.fracDen .fracDen {
+  font-size: 0.9em;
+}
+
+.radical {
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0 1px;
+}
+
+.radicalSign {
+  display: inline-flex;
+  align-items: flex-end;
+  line-height: 1;
+  font-size: 1.15em;
+  margin-right: -0.12em;
+}
+
+.radicand {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.1;
+  border-top: 1px solid currentColor;
+  margin-top: 0.12em;
+  padding: 1px 2px 0 2px;
+}
+
+.placeholder {
+  opacity: 0.55;
+}
+
+.cursor {
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin: 0 0.5px;
+  vertical-align: middle;
+  background: currentColor;
+  animation: cursorBlink 1s steps(1) infinite;
+}
+
+@keyframes cursorBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.sup {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 0.62em;
+  line-height: 1;
 }
 
 .fracBar {

@@ -3,17 +3,23 @@ import { deleteAtCursor, insertAtCursor } from '../../../math/expression';
 import { createEvalContext, evaluate } from '../../../math/evaluator';
 import { formatValue } from '../../format';
 import { toReal } from '../../../math/ast';
+import { toNaturalDisplay } from '../../naturalDisplay';
+import { prefersMathInput } from '../../settings';
+import { continueFromResult } from '../calculate';
 
 export function createComplexState(): ComplexAppState {
   return { expression: '', result: '', cursorPos: 0, showResult: false };
 }
 
 export function getComplexDisplay(state: ComplexAppState, ctx: KeyContext): DisplayState {
+  const natural = prefersMathInput(ctx.settings);
   return {
     lines: [
       { text: 'Complex', size: 'small' },
-      { text: state.expression || '0', align: 'right' },
-      ...(state.showResult ? [{ text: state.result, align: 'right' as const, size: 'large' as const }] : []),
+      { text: natural ? toNaturalDisplay(state.expression || '0') : state.expression || '0', align: 'right', natural },
+      ...(state.showResult
+        ? [{ text: state.result, align: 'right' as const, size: 'large' as const, natural }]
+        : []),
     ],
     showShift: ctx.shiftActive,
   };
@@ -27,7 +33,7 @@ export function handleComplexKey(
   const inserts: Partial<Record<KeyId, string>> = {
     ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
     FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9',
-    DOT: '.', PLUS: '+', MINUS: '-', MULT: '*', DIV: '/',
+    DOT: '.', PLUS: '+', MINUS: '-', MULT: '×', DIV: '÷',
     LPAREN: '(', RPAREN: ')', X: 'i', ANS: 'Ans',
     SIN: 're(', COS: 'im(', TAN: 'arg(', LOG: 'conj(', SQRT: 'polar(',
   };
@@ -53,7 +59,8 @@ export function handleComplexKey(
   }
   const insert = inserts[key];
   if (insert) {
-    const { text, cursor } = insertAtCursor(state.expression, insert, state.cursorPos);
+    const base = state.showResult ? continueFromResult(insert) : state;
+    const { text, cursor } = insertAtCursor(base.expression, insert, base.cursorPos);
     return { state: { ...state, expression: text, cursorPos: cursor, showResult: false }, result: { handled: true } };
   }
   return { state, result: { handled: false } };

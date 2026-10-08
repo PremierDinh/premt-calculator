@@ -126,6 +126,9 @@ export interface DisplayState {
   menuItems?: HomeMenuItem[];
   selectedMenuIndex?: number;
   gridData?: string[][];
+  /** sheet: tiny spreadsheet preview; matrix: bracketed values; table: header row + values. */
+  gridVariant?: 'sheet' | 'matrix' | 'table';
+  /** Row index within gridData. */
   highlightCell?: { row: number; col: number };
   overlay?: Overlay;
   qrImageDataUrl?: string;
@@ -223,7 +226,7 @@ export interface TableState {
   inputBuffer: string;
 }
 
-export type EqnType = 'quadratic' | 'simultaneous' | 'general';
+export type EqnType = 'quadratic' | 'cubic' | 'simultaneous' | 'simultaneous3' | 'general';
 
 export interface EquationState {
   screen: 'type' | 'input' | 'result';
@@ -277,8 +280,10 @@ export interface MatrixAppState {
   editRow: number;
   editCol: number;
   inputBuffer: string;
-  op: 'det' | 'inv' | 'tr' | 'add' | 'sub' | 'mul';
+  op: 'det' | 'inv' | 'tr' | 'add' | 'sub' | 'mul' | 'trn';
   resultText: string;
+  resultTitle?: string;
+  resultGrid?: string[][];
 }
 
 export interface VectorAppState {
@@ -287,7 +292,7 @@ export interface VectorAppState {
   dim: 2 | 3;
   editIndex: number;
   inputBuffer: string;
-  op: 'dot' | 'cross' | 'norm' | 'add' | 'sub';
+  op: 'dot' | 'cross' | 'norm' | 'add' | 'sub' | 'angle';
   resultText: string;
 }
 

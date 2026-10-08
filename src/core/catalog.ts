@@ -1,6 +1,7 @@
 import type { BaseNBase, CatalogGroup, ModeId, ModeState } from './types';
 import type { Language } from './settings';
-import { createEquationState } from './modes/equation';
+import { createEquationState, coefficientsFor } from './modes/equation';
+import { CALC_OPTIONS_1VAR, CALC_OPTIONS_2VAR } from './modes/statistics';
 import { createDistributionState } from './modes/distribution';
 
 export type CatalogApplyResult =
@@ -101,6 +102,8 @@ export function getCatalog(mode: ModeId, lang: Language): CatalogGroup[] {
         { id: 'quad', insert: '__EQN_QUAD__', label: vi ? 'Bậc 2' : 'Quadratic' },
         { id: 'simul', insert: '__EQN_SIMUL__', label: vi ? 'Hệ 2 ẩn' : 'Simultaneous' },
         { id: 'linear', insert: '__EQN_LINEAR__', label: vi ? 'Bậc 1' : 'Linear' },
+        { id: 'cubic', insert: '__EQN_CUBIC__', label: vi ? 'Bậc 3' : 'Cubic' },
+        { id: 'simul3', insert: '__EQN_SIMUL3__', label: vi ? 'Hệ 3 ẩn' : '3 unknowns' },
       ],
     }];
   }
@@ -253,7 +256,7 @@ function applySpecialAction(
         kind: 'modeState',
         modeState: {
           ...modeState,
-          equation: { ...createEquationState(), eqnType: 'quadratic', screen: 'input', coeffIndex: 0 },
+          equation: { ...createEquationState(), eqnType: 'quadratic', coefficients: coefficientsFor('quadratic'), screen: 'input', coeffIndex: 0 },
         },
       };
     case '__EQN_SIMUL__':
@@ -261,15 +264,26 @@ function applySpecialAction(
         kind: 'modeState',
         modeState: {
           ...modeState,
-          equation: { ...createEquationState(), eqnType: 'simultaneous', screen: 'input', coeffIndex: 0 },
+          equation: { ...createEquationState(), eqnType: 'simultaneous', coefficients: coefficientsFor('simultaneous'), screen: 'input', coeffIndex: 0 },
         },
       };
+    case '__EQN_CUBIC__':
+    case '__EQN_SIMUL3__': {
+      const eqnType = insert === '__EQN_CUBIC__' ? 'cubic' : 'simultaneous3';
+      return {
+        kind: 'modeState',
+        modeState: {
+          ...modeState,
+          equation: { ...createEquationState(), eqnType, coefficients: coefficientsFor(eqnType), screen: 'input', coeffIndex: 0 },
+        },
+      };
+    }
     case '__EQN_LINEAR__':
       return {
         kind: 'modeState',
         modeState: {
           ...modeState,
-          equation: { ...createEquationState(), eqnType: 'general', screen: 'input', coeffIndex: 0 },
+          equation: { ...createEquationState(), eqnType: 'general', coefficients: coefficientsFor('general'), screen: 'input', coeffIndex: 0 },
         },
       };
     case '__DIST_NORMAL__':
@@ -297,7 +311,7 @@ function applySpecialAction(
         kind: 'modeState',
         modeState: {
           ...modeState,
-          inequality: { ...modeState.inequality, ineqType: 'linear', screen: 'input' },
+          inequality: { ...modeState.inequality, ineqType: 'linear', screen: 'input', coefficients: ['1', '0'], coeffIndex: 0, inputBuffer: '' },
         },
       };
     case '__INEQ_QUAD__':
@@ -305,7 +319,7 @@ function applySpecialAction(
         kind: 'modeState',
         modeState: {
           ...modeState,
-          inequality: { ...modeState.inequality, ineqType: 'quadratic', screen: 'input' },
+          inequality: { ...modeState.inequality, ineqType: 'quadratic', screen: 'input', coefficients: ['1', '0', '0'], coeffIndex: 0, inputBuffer: '' },
         },
       };
     case '__MBOX_DICE__':
@@ -324,7 +338,8 @@ function applySpecialAction(
             dataType: '1-var',
             screen: 'data-input',
             data: [],
-            calcOptions: ['n', 'Σx', 'x̄', 'σx', 'σ', 'minX', 'maxX', 'Med', 'Q1', 'Q3'],
+            calcOptions: CALC_OPTIONS_1VAR,
+            selectedCalc: 0,
             inputBuffer: '',
             inputField: 'x',
           },
@@ -340,7 +355,8 @@ function applySpecialAction(
             dataType: '2-var',
             screen: 'data-input',
             data: [],
-            calcOptions: ['n', 'Σx', 'Σy', 'x̄', 'ȳ', 'A', 'B', 'r', 'ŷ'],
+            calcOptions: CALC_OPTIONS_2VAR,
+            selectedCalc: 0,
             inputBuffer: '',
             inputField: 'x',
           },

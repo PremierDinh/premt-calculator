@@ -1,4 +1,3 @@
-import { lazy, Suspense } from 'react';
 import { CalculatorShell } from '../CalculatorShell';
 import { GuidePanel } from './GuidePanel';
 import { SiteFooter } from './SiteFooter';
@@ -6,8 +5,6 @@ import { SiteHeader } from './SiteHeader';
 import { LIVE_DEMO_URL, modeBlurb, t } from '../../i18n/strings';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import type { ModeId } from '../../core/types';
-
-const ChatBot = lazy(() => import('./ChatBot').then((m) => ({ default: m.ChatBot })));
 
 const MODE_KEYS = [
   'calculate', 'statistics', 'distribution', 'spreadsheet', 'table', 'equation',
@@ -78,10 +75,6 @@ export function Website() {
             </div>
           </div>
         </section>
-
-        <Suspense fallback={null}>
-          <ChatBot language={language} />
-        </Suspense>
 
         <section className="section" id="simulator">
           <div className="sectionInner">

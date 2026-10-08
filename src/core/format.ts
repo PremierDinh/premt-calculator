@@ -5,6 +5,7 @@ import { formatVector } from '../math/vector';
 import type { CalcValue } from '../math/ast';
 import type { CalculatorSettings, NumberFormat } from './settings';
 import { DEFAULT_SETTINGS, prefersDecimalOutput } from './settings';
+import { exactRealString } from './exactForm';
 
 const ENG_SYMBOLS: Array<{ exp: number; symbol: string }> = [
   { exp: 12, symbol: 'T' },
@@ -33,10 +34,8 @@ export function formatValue(value: CalcValue, settings: CalculatorSettings): str
       return value.value;
     default:
       if (shouldPreferFraction(settings)) {
-        const frac = toFraction(value.value);
-        if (frac && frac.den <= 10000) {
-          return localizeNumber(formatFraction(frac, settings.fractionForm === 'mixed'), settings);
-        }
+        const exact = exactRealString(value.value, settings.fractionForm === 'mixed');
+        if (exact) return localizeNumber(exact, settings);
       }
       return formatNumber(value.value, settings);
   }
@@ -65,7 +64,7 @@ export function formatNumber(value: number, settingsOrFormat: CalculatorSettings
       raw = value.toFixed(settings.fixDigits);
       break;
     case 'sci':
-      raw = value.toExponential(settings.sciDigits);
+      raw = timesTenPower(value.toExponential(Math.max(0, settings.sciDigits - 1)), false);
       break;
     case 'eng': {
       if (value === 0) {
@@ -76,21 +75,34 @@ export function formatNumber(value: number, settingsOrFormat: CalculatorSettings
       const mantissa = value / 10 ** exp;
       if (settings.engineerSymbol) {
         const sym = ENG_SYMBOLS.find((s) => s.exp === exp);
-        raw = sym ? `${mantissa.toPrecision(6)}${sym.symbol}` : `${mantissa.toPrecision(6)}E${exp}`;
+        raw = sym ? `${mantissa.toPrecision(6)}${sym.symbol}` : `${mantissa.toPrecision(6)}×10${superscript(exp)}`;
       } else {
-        raw = `${mantissa.toPrecision(6)}E${exp >= 0 ? '+' : ''}${exp}`;
+        raw = `${mantissa.toPrecision(6)}×10${superscript(exp)}`;
       }
       break;
     }
     default:
-      if (Math.abs(value) >= 1e10 || (Math.abs(value) > 0 && Math.abs(value) < 1e-6)) {
-        raw = value.toExponential(6);
+      if (Math.abs(value) >= 1e10 || (Math.abs(value) > 0 && Math.abs(value) < 1e-9)) {
+        raw = timesTenPower(value.toExponential(9));
       } else {
         raw = String(parseFloat(value.toPrecision(10)));
       }
   }
 
   return localizeNumber(raw, settings);
+}
+
+const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+
+function superscript(n: number): string {
+  return String(n).replace('-', '⁻').replace(/\d/g, (d) => SUPERSCRIPT_DIGITS[Number(d)]);
+}
+
+/** "1.2345e+18" → "1.2345×10¹⁸"; Norm drops trailing mantissa zeros, Sci keeps the requested digits. */
+function timesTenPower(exponential: string, trimZeros = true): string {
+  const [mantissa, exp] = exponential.split('e');
+  const shown = trimZeros && mantissa.includes('.') ? mantissa.replace(/\.?0+$/, '') : mantissa;
+  return `${shown}×10${superscript(Number(exp))}`;
 }
 
 export function localizeNumber(raw: string, settings: CalculatorSettings): string {

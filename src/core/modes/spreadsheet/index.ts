@@ -112,7 +112,8 @@ export function getSpreadsheetDisplay(state: SpreadsheetState): DisplayState {
         { text: state.editBuffer, align: 'right' },
       ],
       gridData: buildGridPreview(state),
-      highlightCell: { row: selectedRow, col: selectedCol },
+      gridVariant: 'sheet',
+      highlightCell: { row: selectedRow - Math.max(0, selectedRow - 1), col: selectedCol },
     };
   }
 
@@ -123,7 +124,8 @@ export function getSpreadsheetDisplay(state: SpreadsheetState): DisplayState {
       { text: `Row ${selectedRow + 1} Col ${colLabel(selectedCol)}`, size: 'small' },
     ],
     gridData: buildGridPreview(state),
-    highlightCell: { row: selectedRow, col: selectedCol },
+    gridVariant: 'sheet',
+      highlightCell: { row: selectedRow - Math.max(0, selectedRow - 1), col: selectedCol },
   };
 }
 

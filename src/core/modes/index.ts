@@ -37,12 +37,12 @@ export function getModeDisplay(mode: ModeId, modeState: ModeState, ctx: KeyConte
   switch (mode) {
     case 'home': return getHomeDisplay(modeState.home, ctx);
     case 'calculate': return getCalculateDisplay(modeState.calculate, ctx);
-    case 'statistics': return getStatisticsDisplay(modeState.statistics);
+    case 'statistics': return getStatisticsDisplay(modeState.statistics, ctx.settings);
     case 'distribution': return getDistributionDisplay(modeState.distribution);
     case 'table': return getTableDisplay(modeState.table, ctx.settings);
-    case 'equation': return getEquationDisplay(modeState.equation);
+    case 'equation': return getEquationDisplay(modeState.equation, ctx.settings);
     case 'spreadsheet': return getSpreadsheetDisplay(modeState.spreadsheet);
-    case 'inequality': return getInequalityDisplay(modeState.inequality);
+    case 'inequality': return getInequalityDisplay(modeState.inequality, ctx.settings);
     case 'complex': return getComplexDisplay(modeState.complex, ctx);
     case 'basen': return getBaseNDisplay(modeState.basen);
     case 'matrix': return getMatrixDisplay(modeState.matrix, ctx);
