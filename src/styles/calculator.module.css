@@ -58,11 +58,11 @@
 
 .topDeck {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: 1fr 1fr 1fr 2.4fr 1fr 1fr;
   grid-template-areas:
-    "on home menu up . pgup panel"
-    "set exit left ok right pgdn ."
-    "alpha shift vkey func down cat tools";
+    "on home menu dpad pgup cat"
+    "set exit func dpad pgdn tools"
+    "alpha shift vkey dpad . panel";
   gap: 2px 4px;
   margin: 2px 0 8px;
 }
@@ -70,22 +70,113 @@
 .areaOn { grid-area: on; }
 .areaHome { grid-area: home; }
 .areaMenu { grid-area: menu; }
-.areaUp { grid-area: up; }
+.areaDpad { grid-area: dpad; }
 .areaPgUp { grid-area: pgup; }
 .areaSet { grid-area: set; }
 .areaExit { grid-area: exit; }
-.areaLeft { grid-area: left; }
-.areaOk { grid-area: ok; }
-.areaRight { grid-area: right; }
 .areaPgDn { grid-area: pgdn; }
 .areaAlpha { grid-area: alpha; }
 .areaShift { grid-area: shift; }
 .areaVar { grid-area: vkey; }
 .areaFunc { grid-area: func; }
-.areaDown { grid-area: down; }
 .areaCat { grid-area: cat; }
 .areaTools { grid-area: tools; }
 .areaPanel { grid-area: panel; }
+
+.dpadWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.dpad {
+  --dpad-size: 132px;
+  position: relative;
+  width: min(100%, var(--dpad-size));
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #ffffff 0%, #f1f1f1 60%, #e4e7e6 100%);
+  box-shadow:
+    0 3px 0 #9bb8b0,
+    0 5px 12px rgba(40, 70, 65, 0.18),
+    inset 0 1px 0 #fff;
+  overflow: hidden;
+}
+
+.dpadArrow {
+  position: absolute;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+
+.dpadArrow .glyph {
+  width: 48%;
+  height: 48%;
+  max-width: 24px;
+  max-height: 24px;
+}
+
+.dpadUp,
+.dpadDown {
+  left: 30%;
+  width: 40%;
+  height: 32%;
+}
+
+.dpadUp { top: 0; }
+.dpadDown { bottom: 0; }
+
+.dpadLeft,
+.dpadRight {
+  top: 30%;
+  height: 40%;
+  width: 32%;
+}
+
+.dpadLeft { left: 0; }
+.dpadRight { right: 0; }
+
+.dpadArrow:active,
+.dpadArrow.dpadPressed {
+  background: rgba(47, 143, 214, 0.14);
+}
+
+.dpadOk {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40%;
+  height: 40%;
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #f6f6f6 55%, #e9eceb 100%);
+  box-shadow:
+    0 0 0 1px rgba(155, 184, 176, 0.55),
+    0 2px 0 #9bb8b0,
+    0 3px 6px rgba(40, 70, 65, 0.16);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: transform 0.05s, box-shadow 0.05s;
+}
+
+.dpadOk:active,
+.dpadOk.dpadPressed {
+  transform: translate(-50%, calc(-50% + 1px));
+  box-shadow:
+    0 0 0 1px rgba(155, 184, 176, 0.55),
+    inset 0 2px 3px rgba(0, 0, 0, 0.1);
+}
 
 .keyWrapper.panelToggle {
   display: none;
@@ -395,6 +486,10 @@
   .topDeck .key,
   .sciBlock .key {
     max-width: var(--key-size);
+  }
+
+  .dpad {
+    --dpad-size: calc(var(--key-size) * 2.9);
   }
 
   .numPad .key {

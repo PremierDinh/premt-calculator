@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import styles from '../../styles/calculator.module.css';
 import { Key } from './Key';
+import { KeyGlyph } from './KeyGlyph';
 import { getKeyDefinition } from '../../core/keyMap';
 import type { KeyId } from '../../core/types';
 import { useCalculatorStore } from '../../store/calculatorStore';
@@ -37,6 +39,44 @@ function ToolsToggle() {
   );
 }
 
+function PadButton({ id, className, children }: { id: KeyId; className: string; children: ReactNode }) {
+  const pressKey = useCalculatorStore((s) => s.pressKey);
+  const releaseKey = useCalculatorStore((s) => s.releaseKey);
+  const pressed = useCalculatorStore((s) => s.pressedKey === id);
+
+  return (
+    <button
+      type="button"
+      className={`${className} ${pressed ? styles.dpadPressed : ''}`}
+      aria-label={id}
+      onMouseDown={() => pressKey(id)}
+      onMouseUp={releaseKey}
+      onMouseLeave={releaseKey}
+      onTouchStart={(e) => {
+        e.preventDefault();
+        pressKey(id);
+      }}
+      onTouchEnd={releaseKey}
+    >
+      {children}
+    </button>
+  );
+}
+
+function DPad() {
+  return (
+    <div className={`${styles.dpadWrap} ${styles.areaDpad}`}>
+      <div className={styles.dpad}>
+        <PadButton id="UP" className={`${styles.dpadArrow} ${styles.dpadUp}`}><KeyGlyph id="UP" /></PadButton>
+        <PadButton id="LEFT" className={`${styles.dpadArrow} ${styles.dpadLeft}`}><KeyGlyph id="LEFT" /></PadButton>
+        <PadButton id="RIGHT" className={`${styles.dpadArrow} ${styles.dpadRight}`}><KeyGlyph id="RIGHT" /></PadButton>
+        <PadButton id="DOWN" className={`${styles.dpadArrow} ${styles.dpadDown}`}><KeyGlyph id="DOWN" /></PadButton>
+        <PadButton id="OK" className={styles.dpadOk}>OK</PadButton>
+      </div>
+    </div>
+  );
+}
+
 export function KeypadGrid() {
   return (
     <>
@@ -45,19 +85,15 @@ export function KeypadGrid() {
         {K('ON', styles.areaOn)}
         {K('HOME', styles.areaHome)}
         {K('MENU', styles.areaMenu)}
-        {K('UP', styles.areaUp)}
+        <DPad />
         {K('PAGEUP', styles.areaPgUp)}
         {K('SETTINGS', styles.areaSet)}
         {K('EXIT', styles.areaExit)}
-        {K('LEFT', styles.areaLeft)}
-        {K('OK', styles.areaOk)}
-        {K('RIGHT', styles.areaRight)}
         {K('PAGEDOWN', styles.areaPgDn)}
         {K('ALPHA', styles.areaAlpha)}
         {K('SHIFT', styles.areaShift)}
         {K('VARIABLE', styles.areaVar)}
         {K('FUNCTION', styles.areaFunc)}
-        {K('DOWN', styles.areaDown)}
         {K('CATALOG', styles.areaCat)}
         {K('TOOLS', styles.areaTools)}
       </div>
