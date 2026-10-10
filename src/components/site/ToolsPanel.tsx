@@ -17,7 +17,7 @@ import {
   lcmInt,
   primeFactorize,
 } from '../../core/tools/numberTheory';
-import { CALC_OPTIONS_1VAR, compute1Var } from '../../core/modes/statistics';
+import { CALC_OPTIONS_1VAR, CALC_OPTIONS_2VAR, compute1Var, compute2Var } from '../../core/modes/statistics';
 import { GraphTool } from './tools/GraphTool';
 import { SolveTool } from './tools/SolveTool';
 import { BaseTool, MatrixTool, TableTool } from './tools/MoreTools';
@@ -369,16 +369,101 @@ function StatsTool({ tr }: { tr: Tr }) {
   const insertText = useCalculatorStore((s) => s.insertText);
   const loadStatData = useCalculatorStore((s) => s.loadStatData);
   const after = useAfterAction();
+  const [kind, setKind] = useState<'1' | '2'>('1');
   const [text, setText] = useState('2 4 4 4 5 5 7 9');
+  const [pairsText, setPairsText] = useState('1 2.1\n2 3.9\n3 6.2\n4 7.8\n5 10.1');
+  const [predictX, setPredictX] = useState('6');
 
   const values = useMemo(
     () => text.split(/[\s;,]+/).map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite),
     [text],
   );
   const rows = useMemo(() => values.map((x) => ({ x, freq: 1 })), [values]);
+  const pairs = useMemo(
+    () =>
+      pairsText
+        .split('\n')
+        .map((line) => line.trim().split(/[\s;,]+/).map(Number))
+        .filter((p) => p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+        .map(([x, y]) => ({ x, y, freq: 1 })),
+    [pairsText],
+  );
+
+  const kindSwitch = (
+    <div className="solveModes solveModes2" role="radiogroup">
+      {(['1', '2'] as const).map((k) => (
+        <button
+          type="button"
+          role="radio"
+          key={k}
+          aria-checked={kind === k}
+          className={`solveMode ${kind === k ? 'solveModeActive' : ''}`}
+          onClick={() => setKind(k)}
+        >
+          {k === '1' ? tr('1 biến', '1-variable') : tr('2 biến · hồi quy', '2-variable · regression')}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (kind === '2') {
+    const a = compute2Var(pairs, 'a');
+    const b = compute2Var(pairs, 'b');
+    const px = Number(predictX.replace(',', '.'));
+    const predicted = predictX.trim() && Number.isFinite(px) ? a + b * px : NaN;
+    return (
+      <div className="toolBody">
+        {kindSwitch}
+        <label className="toolField">
+          <span>{tr('Cặp số x y — mỗi dòng một cặp (dán từ Excel được)', 'x y pairs — one per line (paste from Excel works)')}</span>
+          <textarea className="toolInput toolTextarea" rows={5} value={pairsText} onChange={(e) => setPairsText(e.target.value)} />
+        </label>
+        {pairs.length >= 2 ? (
+          <>
+            <div className="toolResult">
+              <span className="toolMuted">{tr('Hồi quy', 'Regression')}</span>
+              <span className="toolResultValue">
+                y = {shortNumber(a)} {b < 0 ? '−' : '+'} {shortNumber(Math.abs(b))}x
+              </span>
+            </div>
+            <div className="statGrid">
+              {CALC_OPTIONS_2VAR.map((opt) => {
+                const v = compute2Var(pairs, opt);
+                return (
+                  <button
+                    type="button"
+                    key={opt}
+                    className="statCell"
+                    disabled={!Number.isFinite(v)}
+                    title={tr('Chèn vào máy', 'Insert into calculator')}
+                    onClick={() => after(() => insertText(numberToExpression(v)))}
+                  >
+                    <span className="toolMuted">{opt}</span>
+                    <span className="statValue">{shortNumber(v)}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="toolResult">
+              <span className="toolMuted">ŷ ({tr('dự đoán', 'predict')}) x =</span>
+              <input className="toolInput solvePredict" inputMode="decimal" value={predictX} onChange={(e) => setPredictX(e.target.value)} />
+              <span className="toolResultValue">→ {shortNumber(predicted)}</span>
+              <span className="toolSpacer" />
+              <button type="button" className="toolChip" disabled={!Number.isFinite(predicted)} onClick={() => after(() => insertText(numberToExpression(predicted)))}>
+                {tr('Chèn', 'Insert')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="toolHint">{tr('Nhập ít nhất hai cặp số.', 'Enter at least two pairs.')}</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="toolBody">
+      {kindSwitch}
       <label className="toolField">
         <span>{tr('Dãy số (cách nhau bởi dấu cách, phẩy hoặc xuống dòng)', 'Data (space, comma or newline separated)')}</span>
         <textarea className="toolInput toolTextarea" rows={3} value={text} onChange={(e) => setText(e.target.value)} />

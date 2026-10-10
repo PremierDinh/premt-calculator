@@ -471,6 +471,16 @@ a {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.solveModes2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.toolInput.solvePredict {
+  width: 72px;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+}
+
 button.solveAngle {
   border: none;
   cursor: pointer;
