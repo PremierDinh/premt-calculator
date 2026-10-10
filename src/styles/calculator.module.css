@@ -345,10 +345,30 @@
     display: none;
   }
 
+  .shell > * {
+    flex-shrink: 0;
+  }
+
+  /* 9 key rows (numpad rows 1.12x) share the keypad height minus legends and gaps. */
+  .keypadArea {
+    --legend: 18px;
+    --key-size: max(24px, calc((100vh - 260px - 9 * var(--legend) - 64px) / 9.5));
+  }
+
+  @supports (height: 1cqh) {
+    .keypadArea {
+      container-type: size;
+      --key-size: max(24px, calc((100cqh - 9 * var(--legend) - 64px) / 9.5));
+    }
+  }
+
   .topDeck .key,
-  .sciBlock .key,
+  .sciBlock .key {
+    max-width: var(--key-size);
+  }
+
   .numPad .key {
-    max-width: none;
+    max-width: calc(var(--key-size) * 1.12);
   }
 
   .numPad {
@@ -382,6 +402,10 @@
       max(6px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom))
       max(6px, env(safe-area-inset-left));
+  }
+
+  .keypadArea {
+    --legend: 14px;
   }
 
   .legendRow {
