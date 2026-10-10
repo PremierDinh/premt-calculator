@@ -44,6 +44,7 @@ interface CalculatorStore {
   pressKey: (key: KeyId) => void;
   releaseKey: () => void;
   navigateToMode: (mode: ModeId) => void;
+  selectHomeItem: (index: number) => void;
   openSettingsOverlay: () => void;
   setLanguage: (language: Language) => void;
 }
@@ -491,6 +492,15 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
       alphaActive: false,
       qrPayload: null,
       qrImageDataUrl: null,
+    });
+    get().refreshDisplay();
+  },
+
+  selectHomeItem: (index: number) => {
+    const s = get();
+    set({
+      lastInputAt: Date.now(),
+      modeState: { ...s.modeState, home: { selectedIndex: index, scrollRow: Math.floor(index / 3) } },
     });
     get().refreshDisplay();
   },

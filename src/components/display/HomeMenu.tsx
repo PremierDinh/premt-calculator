@@ -1,6 +1,10 @@
-import type { ReactElement } from 'react';
+import { useRef, type ReactElement } from 'react';
 import lcdStyles from '../../styles/lcd.module.css';
 import type { HomeMenuItem, ModeId } from '../../core/types';
+import { useCalculatorStore } from '../../store/calculatorStore';
+
+const PAGE_SIZE = 6;
+const SWIPE_PX = 40;
 
 interface HomeMenuProps {
   items: HomeMenuItem[];
@@ -66,33 +70,68 @@ function MenuIcon({ icon }: { icon: ModeId }) {
 }
 
 export function HomeMenu({ items, selectedIndex }: HomeMenuProps) {
-  const page = Math.floor(selectedIndex / 6);
-  const pageCount = Math.ceil(items.length / 6);
-  const visible = items.slice(page * 6, page * 6 + 6);
+  const navigateToMode = useCalculatorStore((s) => s.navigateToMode);
+  const selectHomeItem = useCalculatorStore((s) => s.selectHomeItem);
+  const swipeStartX = useRef<number | null>(null);
+  const swiped = useRef(false);
+
+  const page = Math.floor(selectedIndex / PAGE_SIZE);
+  const pageCount = Math.ceil(items.length / PAGE_SIZE);
+  const visible = items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+  const goToPage = (p: number) => {
+    if (p < 0 || p >= pageCount || p === page) return;
+    selectHomeItem(p * PAGE_SIZE);
+  };
 
   return (
     <>
-      <div className={lcdStyles.homeGrid}>
+      <div
+        className={lcdStyles.homeGrid}
+        onPointerDown={(e) => {
+          swipeStartX.current = e.clientX;
+          swiped.current = false;
+        }}
+        onPointerUp={(e) => {
+          if (swipeStartX.current === null) return;
+          const dx = e.clientX - swipeStartX.current;
+          swipeStartX.current = null;
+          if (Math.abs(dx) < SWIPE_PX) return;
+          swiped.current = true;
+          goToPage(dx < 0 ? page + 1 : page - 1);
+        }}
+      >
         {visible.map((item, i) => {
-          const abs = page * 6 + i;
+          const abs = page * PAGE_SIZE + i;
           return (
-            <div
+            <button
+              type="button"
               key={item.id}
               className={`${lcdStyles.menuItem} ${abs === selectedIndex ? lcdStyles.menuItemSelected : ''}`}
+              onClick={() => {
+                if (swiped.current) return;
+                selectHomeItem(abs);
+                navigateToMode(item.id);
+              }}
             >
               <MenuIcon icon={item.icon} />
               <span className={lcdStyles.menuLabel}>{item.label}</span>
-            </div>
+            </button>
           );
         })}
       </div>
       {pageCount > 1 && (
-        <div className={lcdStyles.pageDots} aria-hidden="true">
+        <div className={lcdStyles.pageDots}>
           {Array.from({ length: pageCount }, (_, i) => (
-            <span
+            <button
+              type="button"
               key={i}
-              className={`${lcdStyles.pageDot} ${i === page ? lcdStyles.pageDotActive : ''}`}
-            />
+              aria-label={`Page ${i + 1}`}
+              className={lcdStyles.pageDotHit}
+              onClick={() => goToPage(i)}
+            >
+              <span className={`${lcdStyles.pageDot} ${i === page ? lcdStyles.pageDotActive : ''}`} />
+            </button>
           ))}
         </div>
       )}
