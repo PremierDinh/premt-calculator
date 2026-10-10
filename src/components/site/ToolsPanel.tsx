@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import type { Language } from '../../core/settings';
 import type { VariableName } from '../../core/types';
@@ -422,6 +422,10 @@ export function ToolsPanel({ language }: { language: Language }) {
   const after = useAfterAction();
   const [graphSeed, setGraphSeed] = useState<{ key: number; exprs: string[] } | null>(null);
   const moreTab = MORE_TABS.find((t) => t.id === tab);
+
+  useEffect(() => {
+    if (location.hash.startsWith('#solve=')) setToolsOpen(true);
+  }, [setToolsOpen]);
 
   const plot = (exprs: string[]) => {
     setGraphSeed({ key: Date.now(), exprs });

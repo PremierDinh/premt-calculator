@@ -142,6 +142,33 @@ function linearText(slope: number, intercept: number): string {
   return `y = ${m === '1' ? '' : m === '−1' ? '−' : m}x${c}`;
 }
 
+interface SharedProblem {
+  mode: SolveMode;
+  expr: string;
+  a: string;
+  b: string;
+  angle: Angle;
+}
+
+const SHARE_PREFIX = '#solve=';
+
+function readSharedProblem(): SharedProblem | null {
+  if (typeof location === 'undefined' || !location.hash.startsWith(SHARE_PREFIX)) return null;
+  try {
+    const data = JSON.parse(decodeURIComponent(location.hash.slice(SHARE_PREFIX.length))) as Partial<SharedProblem>;
+    if (!MODES.some((m) => m.id === data.mode) || typeof data.expr !== 'string') return null;
+    return {
+      mode: data.mode as SolveMode,
+      expr: data.expr.slice(0, 500),
+      a: typeof data.a === 'string' ? data.a.slice(0, 50) : '',
+      b: typeof data.b === 'string' ? data.b.slice(0, 50) : '',
+      angle: data.angle === 'rad' ? 'rad' : 'deg',
+    };
+  } catch {
+    return null;
+  }
+}
+
 function endpoint(v: number): string {
   return (exactRealString(v) ?? short(v)).replace('-', '−');
 }
@@ -268,8 +295,10 @@ export function SolveTool({
   const insertText = useCalculatorStore((s) => s.insertText);
   const setVariable = useCalculatorStore((s) => s.setVariable);
 
-  const [mode, setMode] = useState<SolveMode>('equation');
-  const [exprs, setExprs] = useState<Record<SolveMode, string>>({
+  const [shared] = useState(readSharedProblem);
+  const [mode, setMode] = useState<SolveMode>(shared?.mode ?? 'equation');
+  const [shareState, setShareState] = useState<'idle' | 'copied'>('idle');
+  const [exprs, setExprs] = useState<Record<SolveMode, string>>(() => ({
     eval: 'sqrt(2)+3/4×sin(30)',
     equation: 'x^3-6x^2+11x=6',
     system: '2x+y=5\nx-y=1',
@@ -277,8 +306,9 @@ export function SolveTool({
     analyze: 'x^3-3x',
     integral: 'x^2×e^(-x)',
     derivative: 'x^3×ln(x)',
-  });
-  const [ranges, setRanges] = useState<Record<SolveMode, { a: string; b: string }>>({
+    ...(shared ? { [shared.mode]: shared.expr } : {}),
+  }));
+  const [ranges, setRanges] = useState<Record<SolveMode, { a: string; b: string }>>(() => ({
     eval: { a: '', b: '' },
     equation: { a: '-10', b: '10' },
     system: { a: '', b: '' },
@@ -286,8 +316,9 @@ export function SolveTool({
     analyze: { a: '-3', b: '3' },
     integral: { a: '0', b: '1' },
     derivative: { a: '1', b: '' },
-  });
-  const [angle, setAngle] = useState<Angle>(settingsAngle === 'rad' ? 'rad' : 'deg');
+    ...(shared && (shared.a || shared.b) ? { [shared.mode]: { a: shared.a, b: shared.b } } : {}),
+  }));
+  const [angle, setAngle] = useState<Angle>(shared?.angle ?? (settingsAngle === 'rad' ? 'rad' : 'deg'));
   const [storeTarget, setStoreTarget] = useState<VariableName>('A');
   const [stored, setStored] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
@@ -322,6 +353,16 @@ export function SolveTool({
     if (p.angle) setAngle(p.angle);
     setStored(null);
     setShowLibrary(false);
+  };
+
+  const share = () => {
+    const payload: SharedProblem = { mode, expr, a, b, angle };
+    const url = `${location.origin}${location.pathname}${SHARE_PREFIX}${encodeURIComponent(JSON.stringify(payload))}`;
+    history.replaceState(null, '', url);
+    void navigator.clipboard?.writeText(url).then(() => {
+      setShareState('copied');
+      window.setTimeout(() => setShareState('idle'), 1800);
+    });
   };
 
   const storeValue = (value: number) => {
@@ -372,6 +413,9 @@ export function SolveTool({
           📚 {tr('Bài toán mẫu', 'Sample problems')}
         </button>
         <span className="toolSpacer" />
+        <button type="button" className="toolLink" onClick={share} disabled={!expr.trim()} title={tr('Sao chép liên kết tới bài toán này', 'Copy a link to this problem')}>
+          {shareState === 'copied' ? tr('Đã chép liên kết ✓', 'Link copied ✓') : tr('Chia sẻ', 'Share')}
+        </button>
         <button
           type="button"
           className="toolBadge solveAngle"

@@ -69,6 +69,27 @@ function formatTick(v: number, step: number): string {
   return Number(v.toFixed(digits)).toString().replace('-', '−');
 }
 
+function fitY(nodes: (AstNode | null)[], view: View, ctx: EvalContext): View | null {
+  const ys: number[] = [];
+  for (const node of nodes) {
+    if (!node) continue;
+    for (let i = 0; i <= 200; i++) {
+      const y = sample(node, view.xMin + ((view.xMax - view.xMin) * i) / 200, ctx);
+      if (Number.isFinite(y)) ys.push(y);
+    }
+  }
+  if (!ys.length) return null;
+  ys.sort((a, b) => a - b);
+  let lo = ys[Math.floor(ys.length * 0.03)];
+  let hi = ys[Math.ceil(ys.length * 0.97) - 1];
+  if (hi - lo < 1e-9) {
+    lo -= 1;
+    hi += 1;
+  }
+  const pad = (hi - lo) * 0.1;
+  return { ...view, yMin: lo - pad, yMax: hi + pad };
+}
+
 export function GraphTool({ language, seed }: { language: Language; seed?: string[] }) {
   const tr = (vi: string, en: string) => (language === 'vi' ? vi : en);
   const variables = useCalculatorStore((s) => s.variables);
@@ -78,7 +99,11 @@ export function GraphTool({ language, seed }: { language: Language; seed?: strin
   const [fns, setFns] = useState<GraphFn[]>(() =>
     (seed?.length ? seed : ['x^2-4', '2sin(x)']).map((expr, i) => ({ id: i + 1, expr, on: true })),
   );
-  const [view, setView] = useState<View>(DEFAULT_VIEW);
+  const [view, setView] = useState<View>(() => {
+    if (!seed?.length) return DEFAULT_VIEW;
+    const seedCtx: EvalContext = { ans, preAns: 0, variables, matrices: {}, vectors: {}, angleUnit: 'rad' };
+    return fitY(seed.map(compile), DEFAULT_VIEW, seedCtx) ?? DEFAULT_VIEW;
+  });
   const [angle, setAngle] = useState<'rad' | 'deg'>('rad');
   const [piAxis, setPiAxis] = useState(false);
   const [trace, setTrace] = useState<{ px: number; x: number } | null>(null);
@@ -242,24 +267,8 @@ export function GraphTool({ language, seed }: { language: Language; seed?: strin
   }
 
   function autoRange() {
-    const ys: number[] = [];
-    for (const f of compiled) {
-      if (!f.on || !f.node) continue;
-      for (let i = 0; i <= 200; i++) {
-        const y = sample(f.node, view.xMin + ((view.xMax - view.xMin) * i) / 200, ctx);
-        if (Number.isFinite(y)) ys.push(y);
-      }
-    }
-    if (!ys.length) return;
-    ys.sort((a, b) => a - b);
-    let lo = ys[Math.floor(ys.length * 0.03)];
-    let hi = ys[Math.ceil(ys.length * 0.97) - 1];
-    if (hi - lo < 1e-9) {
-      lo -= 1;
-      hi += 1;
-    }
-    const pad = (hi - lo) * 0.1;
-    setView((v) => ({ ...v, yMin: lo - pad, yMax: hi + pad }));
+    const fitted = fitY(compiled.filter((f) => f.on).map((f) => f.node), view, ctx);
+    if (fitted) setView(fitted);
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
