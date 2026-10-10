@@ -19,9 +19,7 @@ export function SiteHeader() {
         <div className="headerActions">
           <nav className="nav" aria-label={t(language, 'menu')}>
             <a href="#simulator">{t(language, 'simulator')}</a>
-            <a href="#modes">{t(language, 'modes')}</a>
-            <a href="#faq">{language === 'vi' ? 'Hỏi đáp' : 'FAQ'}</a>
-          </nav>
+            <a href="#modes">{t(language, 'modes')}</a>          </nav>
           <ThemeToggle language={language} />
           <LanguageSwitcher />
         </div>
