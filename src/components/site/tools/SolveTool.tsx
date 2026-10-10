@@ -8,14 +8,25 @@ import { exactRealString } from '../../../core/exactForm';
 import { toNaturalDisplay } from '../../../core/naturalDisplay';
 import { NaturalLine } from '../../display/NaturalLine';
 import { numberToExpression } from '../../../core/tools/constants';
-import { analyzeFunction, compileFunction, findRoots, integrateAdaptive } from '../../../core/tools/solver';
+import {
+  analyzeFunction,
+  compileFunction,
+  findRoots,
+  integrateAdaptive,
+  parseInequality,
+  solveInequality,
+  solveLinearSystem,
+  type Interval,
+} from '../../../core/tools/solver';
 
-type SolveMode = 'eval' | 'equation' | 'analyze' | 'integral' | 'derivative';
+type SolveMode = 'eval' | 'equation' | 'system' | 'inequality' | 'analyze' | 'integral' | 'derivative';
 type Angle = 'deg' | 'rad';
 
 const MODES: { id: SolveMode; vi: string; en: string }[] = [
   { id: 'eval', vi: 'Tính', en: 'Evaluate' },
   { id: 'equation', vi: 'Phương trình', en: 'Equation' },
+  { id: 'system', vi: 'Hệ PT', en: 'System' },
+  { id: 'inequality', vi: 'Bất PT', en: 'Inequality' },
   { id: 'analyze', vi: 'Khảo sát', en: 'Analyze' },
   { id: 'integral', vi: 'Tích phân', en: 'Integral' },
   { id: 'derivative', vi: 'Đạo hàm', en: 'Derivative' },
@@ -44,6 +55,10 @@ const PROBLEMS: Problem[] = [
   { topic: T.algebra, vi: 'Giải x/3 + 4 = 10', en: 'Solve x/3 + 4 = 10', mode: 'equation', expr: 'x/3+4=10', a: '-100', b: '100' },
   { topic: T.algebra, vi: 'Giải x³ − 6x² + 11x = 6', en: 'Solve x³ − 6x² + 11x = 6', mode: 'equation', expr: 'x^3-6x^2+11x=6', a: '-10', b: '10' },
   { topic: T.algebra, vi: 'Giải eˣ = 3x', en: 'Solve eˣ = 3x', mode: 'equation', expr: 'e^x=3x', a: '-10', b: '10' },
+  { topic: T.algebra, vi: 'Hệ 2x + y = 5; x − y = 1', en: 'System 2x + y = 5; x − y = 1', mode: 'system', expr: '2x+y=5\nx-y=1' },
+  { topic: T.algebra, vi: 'Hệ 3 ẩn x, y, z', en: '3 unknowns x, y, z', mode: 'system', expr: 'x+y+z=6\n2x-y+z=3\nx+2y-z=2' },
+  { topic: T.algebra, vi: 'Bất PT x² − 5x + 6 < 0', en: 'Inequality x² − 5x + 6 < 0', mode: 'inequality', expr: 'x^2-5x+6<0', a: '-10', b: '10' },
+  { topic: T.algebra, vi: 'Bất PT (x − 3)/(x + 1) ≥ 0', en: 'Inequality (x − 3)/(x + 1) ≥ 0', mode: 'inequality', expr: '(x-3)/(x+1)>=0', a: '-100', b: '100' },
   { topic: T.algebra, vi: 'Tính log₃27 + log₃9', en: 'Evaluate log₃27 + log₃9', mode: 'eval', expr: 'log(3,27)+log(3,9)' },
   { topic: T.trig, vi: 'Tính tan45° + sin90°', en: 'Evaluate tan45° + sin90°', mode: 'eval', expr: 'tan(45)+sin(90)', angle: 'deg' },
   { topic: T.trig, vi: 'Giải 2sin(x) = 1 trên [0; 2π]', en: 'Solve 2sin(x) = 1 on [0, 2π]', mode: 'equation', expr: '2sin(x)=1', a: '0', b: '2pi', angle: 'rad' },
@@ -74,6 +89,11 @@ const SYMBOLS: { label: string; text: string }[] = [
   { label: 'log', text: 'log(' },
   { label: '|x|', text: 'abs(' },
 ];
+
+const EXTRA_SYMBOLS: Partial<Record<SolveMode, { label: string; text: string }[]>> = {
+  system: [{ label: 'y', text: 'y' }, { label: 'z', text: 'z' }, { label: '↵', text: '\n' }],
+  inequality: [{ label: '<', text: '<' }, { label: '>', text: '>' }, { label: '≤', text: '<=' }, { label: '≥', text: '>=' }],
+};
 
 const STORE_TARGETS: VariableName[] = ['A', 'B', 'C', 'D', 'E', 'F'];
 const SUBSCRIPTS = '₁₂₃₄₅₆₇₈₉';
@@ -122,9 +142,53 @@ function linearText(slope: number, intercept: number): string {
   return `y = ${m === '1' ? '' : m === '−1' ? '−' : m}x${c}`;
 }
 
+function endpoint(v: number): string {
+  return (exactRealString(v) ?? short(v)).replace('-', '−');
+}
+
+function formatIntervals(intervals: Interval[], lo: number, hi: number): string {
+  return intervals
+    .map((iv) => {
+      if (iv.from === iv.to) return `{${endpoint(iv.from)}}`;
+      const left = iv.from <= lo ? '(−∞' : `${iv.closedFrom ? '[' : '('}${endpoint(iv.from)}`;
+      const right = iv.to >= hi ? '+∞)' : `${endpoint(iv.to)}${iv.closedTo ? ']' : ')'}`;
+      return `${left}; ${right}`;
+    })
+    .join(' ∪ ');
+}
+
 function solve(mode: SolveMode, expr: string, a: string, b: string, ctx: EvalContext, tr: Tr): Outcome {
   if (!expr.trim()) return { values: [] };
   try {
+    if (mode === 'system') {
+      const lines = expr.split(/[\n;]/).map((l) => l.trim()).filter(Boolean);
+      if (lines.length < 2 || lines.length > 3) {
+        return { values: [], error: tr('Nhập 2 hoặc 3 phương trình, mỗi dòng một phương trình (ẩn x, y, z).', 'Enter 2 or 3 equations, one per line (unknowns x, y, z).') };
+      }
+      const r = solveLinearSystem(lines, ctx);
+      if (r.kind === 'nonlinear') return { values: [], error: tr('Chỉ hỗ trợ hệ bậc nhất. Hệ phi tuyến: dùng Phương trình sau khi thế.', 'Only linear systems are supported.') };
+      if (r.kind !== 'unique') {
+        return {
+          values: [],
+          lines: [r.kind === 'none' ? tr('Hệ vô nghiệm.', 'The system has no solution.') : tr('Hệ có vô số nghiệm.', 'The system has infinitely many solutions.')],
+        };
+      }
+      const solution = r.values;
+      return { values: r.vars.map((v, i) => ({ label: v, value: solution[i] })) };
+    }
+    if (mode === 'inequality') {
+      const parsed = parseInequality(expr);
+      if (!parsed) return { values: [], error: tr('Nhập dạng f(x) < g(x), dùng <, >, <=, >=.', 'Use the form f(x) < g(x) with <, >, <=, >=.') };
+      const lo = evalBound(a, ctx);
+      const hi = evalBound(b, ctx);
+      const intervals = solveInequality(compileFunction(parsed.expr, ctx), parsed.op, lo, hi);
+      return {
+        values: [],
+        lines: [intervals.length ? `x ∈ ${formatIntervals(intervals, Math.min(lo, hi), Math.max(lo, hi))}` : tr('Vô nghiệm trong khoảng xét.', 'No solution in this range.')],
+        note: tr(`Xét trên [${a}; ${b}] — ±∞ nghĩa là kéo dài tới biên khoảng xét.`, `Checked on [${a}, ${b}] — ±∞ means the set reaches the edge of the range.`),
+        plot: [parsed.expr],
+      };
+    }
     if (mode === 'eval') {
       const v = evaluateExpression(expr, ctx);
       return Number.isFinite(v) ? { values: [{ label: '=', value: v }] } : { values: [], error: tr('Lỗi toán học', 'Math error') };
@@ -208,6 +272,8 @@ export function SolveTool({
   const [exprs, setExprs] = useState<Record<SolveMode, string>>({
     eval: 'sqrt(2)+3/4×sin(30)',
     equation: 'x^3-6x^2+11x=6',
+    system: '2x+y=5\nx-y=1',
+    inequality: 'x^2-5x+6<0',
     analyze: 'x^3-3x',
     integral: 'x^2×e^(-x)',
     derivative: 'x^3×ln(x)',
@@ -215,6 +281,8 @@ export function SolveTool({
   const [ranges, setRanges] = useState<Record<SolveMode, { a: string; b: string }>>({
     eval: { a: '', b: '' },
     equation: { a: '-10', b: '10' },
+    system: { a: '', b: '' },
+    inequality: { a: '-100', b: '100' },
     analyze: { a: '-3', b: '3' },
     integral: { a: '0', b: '1' },
     derivative: { a: '1', b: '' },
@@ -263,12 +331,15 @@ export function SolveTool({
 
   const rangeLabels: Partial<Record<SolveMode, [string, string]>> = {
     equation: [tr('Tìm từ x =', 'Search from x ='), tr('đến x =', 'to x =')],
+    inequality: [tr('Xét từ x =', 'From x ='), tr('đến x =', 'to x =')],
     analyze: [tr('Xét từ x =', 'From x ='), tr('đến x =', 'to x =')],
     integral: [tr('Cận dưới a', 'Lower bound a'), tr('Cận trên b', 'Upper bound b')],
   };
   const fieldLabel: Record<SolveMode, string> = {
     eval: tr('Biểu thức', 'Expression'),
     equation: tr('Phương trình theo x (vd: x^2=2 hoặc sin(x)-x/2)', 'Equation in x (e.g. x^2=2 or sin(x)-x/2)'),
+    system: tr('Hệ phương trình bậc nhất — mỗi dòng một phương trình, ẩn x, y, z', 'Linear system — one equation per line, unknowns x, y, z'),
+    inequality: tr('Bất phương trình theo x (vd: x^2-5x+6<0, dùng <= cho ≤)', 'Inequality in x (e.g. x^2-5x+6<0, use <= for ≤)'),
     analyze: tr('Hàm số y = f(x)', 'Function y = f(x)'),
     integral: tr('Hàm f(x) cần tích phân', 'Integrand f(x)'),
     derivative: tr('Hàm f(x)', 'Function f(x)'),
@@ -329,7 +400,7 @@ export function SolveTool({
         <textarea
           ref={inputRef}
           className="toolInput toolTextarea solveInput"
-          rows={2}
+          rows={mode === 'system' ? 3 : 2}
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
@@ -342,7 +413,7 @@ export function SolveTool({
       </label>
 
       <div className="solveSymbols">
-        {SYMBOLS.map((s) => (
+        {[...(EXTRA_SYMBOLS[mode] ?? []), ...SYMBOLS].map((s) => (
           <button type="button" key={s.label} className="solveSymbol" onMouseDown={(e) => e.preventDefault()} onClick={() => insertSymbol(s.text)}>
             {s.label}
           </button>
@@ -351,7 +422,11 @@ export function SolveTool({
 
       {expr.trim() && (
         <div className="solvePreview">
-          <NaturalLine text={toNaturalDisplay(expr)} />
+          {expr.split(/[\n;]/).filter((line) => line.trim()).map((line, i) => (
+            <div key={i}>
+              <NaturalLine text={toNaturalDisplay(line.replace(/<=/g, '≤').replace(/>=/g, '≥'))} />
+            </div>
+          ))}
         </div>
       )}
 

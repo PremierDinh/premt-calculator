@@ -27,7 +27,7 @@ const EXTRA_TIPS = {
 const FAQ = {
   vi: [
     ['premt calculator có miễn phí không?', 'Hoàn toàn miễn phí, không cần tài khoản. Mọi phép tính chạy ngay trên máy của bạn, không gửi dữ liệu lên máy chủ.'],
-    ['Giải phương trình bậc cao hoặc phương trình chứa sin, eˣ thế nào?', 'Mở Công cụ → Giải → Phương trình, gõ ví dụ x^3-6x^2+11x=6 hoặc e^x=3x. Máy quét cả khoảng bạn chọn và liệt kê mọi nghiệm thực, kèm dạng chính xác như √3 khi có thể.'],
+    ['Giải phương trình bậc cao hoặc phương trình chứa sin, eˣ thế nào?', 'Mở Công cụ → Giải → Phương trình, gõ ví dụ x^3-6x^2+11x=6 hoặc e^x=3x. Máy quét cả khoảng bạn chọn và liệt kê mọi nghiệm thực, kèm dạng chính xác như √3 hay π/6 khi có thể. Chế độ Hệ PT giải hệ 2–3 ẩn viết tự nhiên (2x+y=5), chế độ Bất PT trả về tập nghiệm dạng khoảng.'],
     ['Khảo sát hàm số có những gì?', 'Chế độ Khảo sát tìm nghiệm, cực đại, cực tiểu, điểm uốn và giao điểm với trục tung trong khoảng đã chọn, rồi vẽ đồ thị chỉ với một lần bấm.'],
     ['Có giải hệ phương trình và tính ma trận không?', 'Có. Công cụ → Thêm → Ma trận tính det, nghịch đảo, hạng, trị riêng, dạng bậc thang. Nhập ma trận cỡ n×(n+1) để giải hệ n ẩn.'],
     ['Lịch sử và biến nhớ có bị mất khi tải lại trang?', 'Không. Lịch sử (100 phép tính gần nhất), biến A–F, x, y, z và Ans được lưu trong trình duyệt. Bạn có thể sao chép hoặc tải lịch sử dạng CSV.'],
@@ -36,7 +36,7 @@ const FAQ = {
   ],
   en: [
     ['Is premt calculator free?', 'Completely free, no account needed. Every calculation runs on your device; nothing is sent to a server.'],
-    ['How do I solve higher-degree or transcendental equations?', 'Open Tools → Solve → Equation and type e.g. x^3-6x^2+11x=6 or e^x=3x. The solver scans your range and lists every real root, with exact forms like √3 when possible.'],
+    ['How do I solve higher-degree or transcendental equations?', 'Open Tools → Solve → Equation and type e.g. x^3-6x^2+11x=6 or e^x=3x. The solver scans your range and lists every real root, with exact forms like √3 or π/6 when possible. System mode solves 2–3 unknowns written naturally (2x+y=5); Inequality mode returns the solution set as intervals.'],
     ['What does function analysis show?', 'Analyze mode finds roots, local maxima and minima, inflection points and the y-intercept in the chosen range, then plots it in one tap.'],
     ['Can it solve systems and do matrix algebra?', 'Yes. Tools → More → Matrix gives det, inverse, rank, eigenvalues and RREF. Enter an n×(n+1) matrix to solve a system of n unknowns.'],
     ['Do history and variables survive a reload?', 'Yes. The last 100 calculations, variables A–F, x, y, z and Ans are stored in your browser. You can copy history or download it as CSV.'],

@@ -2,6 +2,7 @@ import { parse } from '../../math/parser';
 import { evalNode, type EvalContext } from '../../math/evaluator';
 import { toReal } from '../../math/ast';
 import { derivative } from '../../math/calculus';
+import { rref } from './linalg';
 
 export type RealFn = (x: number) => number;
 
@@ -132,6 +133,147 @@ export function analyzeFunction(fn: RealFn, a: number, b: number): { roots: numb
     }
   }
   return { roots: findRoots(fn, a, b), critical: critical.sort((p, q) => p.x - q.x) };
+}
+
+const SYSTEM_VARS = ['x', 'y', 'z'] as const;
+type SystemVar = (typeof SYSTEM_VARS)[number];
+
+export type LinearSystemResult =
+  | { kind: 'unique'; vars: SystemVar[]; values: number[] }
+  | { kind: 'none' | 'infinite'; vars: SystemVar[] }
+  | { kind: 'nonlinear' };
+
+/** Solves 2–3 linear equations in x, y (, z). Coefficients are probed numerically, so any linear form is accepted. */
+export function solveLinearSystem(lines: string[], ctx: EvalContext): LinearSystemResult {
+  const eqs = lines.map((l) => l.trim()).filter(Boolean);
+  if (eqs.length < 2 || eqs.length > 3) throw new Error('count');
+  const vars = SYSTEM_VARS.slice(0, eqs.length) as SystemVar[];
+  const fns = eqs.map((text) => {
+    const parts = text.split('=');
+    if (parts.length !== 2) throw new Error('equation');
+    const lhs = parse(parts[0].trim() || '0');
+    const rhs = parse(parts[1].trim() || '0');
+    return (point: number[]) => {
+      const variables = { ...ctx.variables };
+      vars.forEach((v, i) => {
+        variables[v] = point[i];
+      });
+      const scope = { ...ctx, variables };
+      return toReal(evalNode(lhs, scope)) - toReal(evalNode(rhs, scope));
+    };
+  });
+
+  const zero = vars.map(() => 0);
+  const rows = fns.map((f) => {
+    const c = f(zero);
+    const coeffs = vars.map((_, i) => f(vars.map((__, j) => (i === j ? 1 : 0))) - c);
+    return { f, c, coeffs };
+  });
+  const probes = [vars.map((_, i) => 1.7 + i * 0.9), vars.map((_, i) => -2.3 + i * 1.3)];
+  for (const { f, c, coeffs } of rows) {
+    for (const p of probes) {
+      const predicted = c + coeffs.reduce((s, a, i) => s + a * p[i], 0);
+      if (Math.abs(f(p) - predicted) > 1e-7 * Math.max(1, Math.abs(predicted))) return { kind: 'nonlinear' };
+    }
+  }
+
+  const reduced = rref(rows.map(({ c, coeffs }) => [...coeffs, -c]));
+  const n = vars.length;
+  if (reduced.pivots.includes(n)) return { kind: 'none', vars };
+  if (reduced.rank < n) return { kind: 'infinite', vars };
+  return { kind: 'unique', vars, values: reduced.matrix.slice(0, n).map((row) => polish(row[n])) };
+}
+
+export type InequalityOp = '<' | '<=' | '>' | '>=';
+
+export interface Interval {
+  from: number;
+  to: number;
+  closedFrom: boolean;
+  closedTo: boolean;
+}
+
+/** Splits "lhs op rhs" into lhs − rhs and the operator. */
+export function parseInequality(text: string): { expr: string; op: InequalityOp } | null {
+  const normalized = text.replace(/≤/g, '<=').replace(/≥/g, '>=');
+  const match = normalized.match(/^(.*?)(<=|>=|<|>)(.*)$/);
+  if (!match || /<|>/.test(match[3])) return null;
+  const [, lhs, op, rhs] = match;
+  if (!lhs.trim() || !rhs.trim()) return null;
+  return { expr: `(${lhs.trim()})-(${rhs.trim()})`, op: op as InequalityOp };
+}
+
+/** Solution set of g(x) op 0 restricted to [a, b], as a union of intervals. */
+export function solveInequality(g: RealFn, op: InequalityOp, a: number, b: number, samples = 4000): Interval[] {
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  const strict = op === '<' || op === '>';
+  const holds = (y: number) => Number.isFinite(y) && (op === '<' || op === '<=' ? y < 0 : y > 0);
+  const roots = findRoots(g, lo, hi, samples);
+  const isRoot = (x: number) => roots.some((r) => Math.abs(r - x) < 1e-9);
+
+  const step = (hi - lo) / samples;
+  const intervals: Interval[] = [];
+  let start: number | null = null;
+  let prev = lo;
+  for (let i = 0; i <= samples; i++) {
+    const x = lo + i * step;
+    const ok = holds(g(x)) && !isRoot(x);
+    if (ok && start === null) {
+      const boundary = i === 0 ? lo : refineBoundary(g, holds, prev, x);
+      start = boundary;
+    } else if (!ok && start !== null) {
+      intervals.push({ from: start, to: refineBoundary(g, holds, x, prev), closedFrom: false, closedTo: false });
+      start = null;
+    }
+    prev = x;
+  }
+  if (start !== null) intervals.push({ from: start, to: hi, closedFrom: false, closedTo: true });
+
+  const snapped = intervals.map((iv) => {
+    const from = snapToRoot(iv.from, roots);
+    const to = snapToRoot(iv.to, roots);
+    return {
+      from,
+      to,
+      closedFrom: from === lo ? true : !strict && isRoot(from),
+      closedTo: to === hi ? true : !strict && isRoot(to),
+    };
+  });
+
+  if (!strict) {
+    for (const r of roots) {
+      const covered = snapped.some((iv) => r >= iv.from - 1e-9 && r <= iv.to + 1e-9);
+      if (!covered) snapped.push({ from: r, to: r, closedFrom: true, closedTo: true });
+    }
+  }
+
+  const merged: Interval[] = [];
+  for (const iv of snapped.sort((p, q) => p.from - q.from)) {
+    const last = merged[merged.length - 1];
+    if (last && Math.abs(last.to - iv.from) < 1e-9 && (last.closedTo || iv.closedFrom)) {
+      last.to = iv.to;
+      last.closedTo = iv.closedTo;
+    } else {
+      merged.push({ ...iv });
+    }
+  }
+  return merged;
+}
+
+function refineBoundary(g: RealFn, holds: (y: number) => boolean, outside: number, inside: number): number {
+  let o = outside;
+  let i = inside;
+  for (let k = 0; k < 60; k++) {
+    const mid = (o + i) / 2;
+    if (holds(g(mid))) i = mid;
+    else o = mid;
+  }
+  return polish((o + i) / 2);
+}
+
+function snapToRoot(x: number, roots: number[]): number {
+  return roots.find((r) => Math.abs(r - x) < 1e-7) ?? x;
 }
 
 /** Adaptive Simpson integration. */
