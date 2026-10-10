@@ -46,7 +46,7 @@ export const KEY_DEFINITIONS: KeyDefinition[] = [
   { id: 'DOT', label: '.', alphaLabel: 'y', variant: 'default' },
   { id: 'EXP10', label: '×10□', alphaLabel: 'z', variant: 'default' },
   { id: 'FORMAT', label: 'FORMAT', shiftLabel: 'CYCLE', variant: 'default' },
-  { id: 'EXE', label: 'EXE', shiftLabel: '≈', variant: 'exe' },
+  { id: 'EXE', label: '=', shiftLabel: '≈', variant: 'exe' },
   { id: 'MULT', label: '×', shiftLabel: 'MIXED', variant: 'default' },
   { id: 'DIV', label: '÷', shiftLabel: '%', variant: 'default' },
   { id: 'PLUS', label: '+', shiftLabel: '°′″', variant: 'default' },

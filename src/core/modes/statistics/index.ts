@@ -158,7 +158,7 @@ export function getStatisticsDisplay(state: StatisticsState, settings: Calculato
       const visible = state.calcOptions.slice(start, start + VISIBLE_RESULTS);
       return {
         lines: [
-          { text: `${title}  ▲▼  EXE:Ans`, size: 'small' },
+          { text: `${title}  ▲▼  =:Ans`, size: 'small' },
           ...visible.map((calc, i) => ({
             text: `${start + i === state.selectedCalc ? '▶' : ' '}${calc}=${formatStat(computeValue(state, calc), settings)}`,
             natural,

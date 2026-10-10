@@ -16,7 +16,7 @@ export function getMathBoxDisplay(state: MathBoxState): DisplayState {
     };
   }
   if (state.screen === 'run') {
-    return { lines: [{ text: state.tool, size: 'small' }, { text: state.inputBuffer || 'EXE', align: 'right' }] };
+    return { lines: [{ text: state.tool, size: 'small' }, { text: state.inputBuffer || '=', align: 'right' }] };
   }
   return { lines: [{ text: state.tool, size: 'small' }, { text: state.resultText, align: 'right', size: 'large' }] };
 }

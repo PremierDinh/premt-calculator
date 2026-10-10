@@ -45,7 +45,7 @@ function formatVec(v: Vector, ctx: KeyContext): string {
 
 export function getVectorDisplay(state: VectorAppState, ctx: KeyContext): DisplayState {
   if (state.screen === 'menu') {
-    return { lines: [{ text: 'Vector', size: 'small' }, { text: `▶ ${state.target}` }, { text: '1:A 2:B 3:C EXE:edit f(x):op', size: 'small' }] };
+    return { lines: [{ text: 'Vector', size: 'small' }, { text: `▶ ${state.target}` }, { text: '1:A 2:B 3:C =:edit f(x):op', size: 'small' }] };
   }
   if (state.screen === 'size') {
     return { lines: [{ text: 'Dim', size: 'small' }, { text: String(state.dim) }, { text: '2 / 3', size: 'small' }] };

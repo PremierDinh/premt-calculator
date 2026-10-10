@@ -103,7 +103,7 @@ function HistoryTool({ tr }: { tr: Tr }) {
   if (!items.length) {
     return (
       <p className="toolEmpty">
-        {tr('Chưa có phép tính nào. Bấm EXE trong chế độ Tính toán để lưu lịch sử.', 'No calculations yet. Press EXE in Calculate to record history.')}
+        {tr('Chưa có phép tính nào. Bấm = trong chế độ Tính toán để lưu lịch sử.', 'No calculations yet. Press = in Calculate to record history.')}
       </p>
     );
   }
