@@ -5,6 +5,7 @@
     <link rel="icon" type="image/jpeg" href="./premt-logo.jpg" />
     <link rel="apple-touch-icon" href="./premt-logo.jpg" />
     <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="canonical" href="https://premierdinh.github.io/premt-calculator/" />
     <meta name="theme-color" content="#2563eb" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -12,9 +13,42 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta
       name="description"
-      content="premt calculator — mô phỏng máy tính khoa học trên trình duyệt với 13 ứng dụng, phân số, số phức, ma trận, tiếng Việt và tiếng Anh."
+      content="Máy tính khoa học online miễn phí: 13 ứng dụng, giải phương trình mọi nghiệm, khảo sát hàm số, tích phân, đạo hàm, ma trận, đồ thị, đổi đơn vị, cơ số N. Chạy ngay trên trình duyệt, không cần cài đặt."
     />
-    <title>premt calculator online</title>
+    <meta name="keywords" content="máy tính khoa học online, máy tính casio online, giải phương trình, khảo sát hàm số, tích phân, đạo hàm, ma trận, vẽ đồ thị, scientific calculator" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="premt calculator" />
+    <meta property="og:title" content="premt calculator — Máy tính khoa học online miễn phí" />
+    <meta
+      property="og:description"
+      content="Giải phương trình, khảo sát hàm số, tích phân, ma trận, đồ thị và 13 ứng dụng máy tính khoa học ngay trên trình duyệt."
+    />
+    <meta property="og:url" content="https://premierdinh.github.io/premt-calculator/" />
+    <meta property="og:image" content="https://premierdinh.github.io/premt-calculator/premt-logo.jpg" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary" />
+    <title>premt calculator — Máy tính khoa học online miễn phí</title>
+    <script>
+      try {
+        var saved = localStorage.getItem('premt-theme');
+        var dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.dataset.theme = 'dark';
+      } catch (e) {}
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "premt calculator",
+        "url": "https://premierdinh.github.io/premt-calculator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any",
+        "inLanguage": ["vi", "en"],
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "VND" },
+        "description": "Máy tính khoa học online: giải phương trình, khảo sát hàm số, tích phân, đạo hàm, ma trận, đồ thị, thống kê."
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -95,6 +95,62 @@ function persistSettings(settings: CalculatorSettings) {
   }
 }
 
+const MEMORY_STORAGE_KEY = 'premt-memory';
+export const HISTORY_LIMIT = 100;
+
+interface StoredMemory {
+  ans: number;
+  preAns: number;
+  variables: Record<VariableName, number>;
+  history: HistoryEntry[];
+}
+
+const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+export function parseStoredMemory(raw: string | null): StoredMemory {
+  const empty: StoredMemory = { ans: 0, preAns: 0, variables: { ...DEFAULT_VARS }, history: [] };
+  if (!raw) return empty;
+  try {
+    const data = JSON.parse(raw) as Partial<StoredMemory>;
+    const variables = { ...DEFAULT_VARS };
+    for (const name of Object.keys(DEFAULT_VARS) as VariableName[]) {
+      const v = data.variables?.[name];
+      if (finite(v)) variables[name] = v;
+    }
+    const history = Array.isArray(data.history)
+      ? data.history
+          .filter((h) => h && typeof h.expression === 'string' && typeof h.result === 'string' && finite(h.value))
+          .slice(-HISTORY_LIMIT)
+      : [];
+    return {
+      ans: finite(data.ans) ? data.ans : 0,
+      preAns: finite(data.preAns) ? data.preAns : 0,
+      variables,
+      history,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+function loadStoredMemory(): StoredMemory {
+  try {
+    return parseStoredMemory(localStorage.getItem(MEMORY_STORAGE_KEY));
+  } catch {
+    return parseStoredMemory(null);
+  }
+}
+
+function persistMemory(memory: StoredMemory) {
+  try {
+    localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(memory));
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+const initialMemory = loadStoredMemory();
+
 function applyFractionDisplayToggle(state: CalculatorStore): Partial<CalculatorStore> {
   const settings = { ...state.settings, fractionOutput: !state.settings.fractionOutput };
   const updates: Partial<CalculatorStore> = { settings };
@@ -280,10 +336,10 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   currentMode: 'home',
   shiftActive: false,
   alphaActive: false,
-  ans: 0,
-  preAns: 0,
+  ans: initialMemory.ans,
+  preAns: initialMemory.preAns,
   lastValue: null,
-  variables: { ...DEFAULT_VARS },
+  variables: initialMemory.variables,
   matrices: {},
   vectors: {},
   settings: loadStoredSettings(),
@@ -292,7 +348,7 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   overlay: 'none',
   overlayIndex: 0,
   overlayGroup: 0,
-  history: [],
+  history: initialMemory.history,
   pressedKey: null,
   lastInputAt: Date.now(),
   qrPayload: null,
@@ -467,7 +523,7 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
       updates.vectors = { ...state.vectors, [result.setVector.name]: result.setVector.value };
     }
     if (result.addHistory) {
-      updates.history = [...state.history, result.addHistory].slice(-50);
+        updates.history = [...state.history, result.addHistory].slice(-HISTORY_LIMIT);
     }
     if (result.openQr) {
       const calc = modeState.calculate;
@@ -612,6 +668,14 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
 useCalculatorStore.subscribe((state, prev) => {
   if (state.settings !== prev.settings) {
     persistSettings(state.settings);
+  }
+  if (
+    state.history !== prev.history ||
+    state.variables !== prev.variables ||
+    state.ans !== prev.ans ||
+    state.preAns !== prev.preAns
+  ) {
+    persistMemory({ ans: state.ans, preAns: state.preAns, variables: state.variables, history: state.history });
   }
 });
 

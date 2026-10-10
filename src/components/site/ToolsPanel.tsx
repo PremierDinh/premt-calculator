@@ -20,18 +20,36 @@ import {
 import { CALC_OPTIONS_1VAR, compute1Var } from '../../core/modes/statistics';
 import { GraphTool } from './tools/GraphTool';
 import { SolveTool } from './tools/SolveTool';
+import { BaseTool, MatrixTool, TableTool } from './tools/MoreTools';
 
-type TabId = 'solve' | 'history' | 'variables' | 'graph' | 'constants' | 'units' | 'number' | 'stats';
+type TabId =
+  | 'solve' | 'graph' | 'history' | 'variables' | 'more'
+  | 'matrix' | 'table' | 'base' | 'constants' | 'units' | 'number' | 'stats';
 
-const TABS: { id: TabId; vi: string; en: string; icon: string }[] = [
+interface TabDef {
+  id: TabId;
+  vi: string;
+  en: string;
+  icon: string;
+  descVi?: string;
+  descEn?: string;
+}
+
+const PRIMARY_TABS: TabDef[] = [
   { id: 'solve', vi: 'Giải', en: 'Solve', icon: 'ƒ' },
+  { id: 'graph', vi: 'Đồ thị', en: 'Graph', icon: '∿' },
   { id: 'history', vi: 'Lịch sử', en: 'History', icon: '⟲' },
   { id: 'variables', vi: 'Biến', en: 'Variables', icon: 'x' },
-  { id: 'graph', vi: 'Đồ thị', en: 'Graph', icon: '∿' },
-  { id: 'constants', vi: 'Hằng số', en: 'Constants', icon: 'ħ' },
-  { id: 'units', vi: 'Đơn vị', en: 'Units', icon: '⇄' },
-  { id: 'number', vi: 'Số học', en: 'Numbers', icon: '#' },
-  { id: 'stats', vi: 'Thống kê', en: 'Stats', icon: 'Σ' },
+];
+
+const MORE_TABS: TabDef[] = [
+  { id: 'matrix', vi: 'Ma trận', en: 'Matrix', icon: '▦', descVi: 'det, nghịch đảo, hạng, trị riêng, giải hệ', descEn: 'det, inverse, rank, eigenvalues, systems' },
+  { id: 'table', vi: 'Bảng giá trị', en: 'Table', icon: '⊞', descVi: 'Bảng f(x), g(x) — chép sang Excel', descEn: 'f(x), g(x) table — copy to Excel' },
+  { id: 'base', vi: 'Cơ số N', en: 'Base-N', icon: '⒉', descVi: 'DEC · HEX · OCT · BIN, bù 2', descEn: "DEC · HEX · OCT · BIN, two's complement" },
+  { id: 'stats', vi: 'Thống kê', en: 'Statistics', icon: 'Σ', descVi: 'Dán dãy số → trung bình, σ, tứ phân vị', descEn: 'Paste data → mean, σ, quartiles' },
+  { id: 'number', vi: 'Số học', en: 'Number theory', icon: '#', descVi: 'Phân tích thừa số, ước, ƯCLN, BCNN', descEn: 'Factorization, divisors, GCD, LCM' },
+  { id: 'constants', vi: 'Hằng số', en: 'Constants', icon: 'ħ', descVi: '20 hằng số vật lý CODATA', descEn: '20 CODATA physical constants' },
+  { id: 'units', vi: 'Đơn vị', en: 'Units', icon: '⇄', descVi: 'Đổi 12 loại đơn vị', descEn: 'Convert 12 kinds of units' },
 ];
 
 const VAR_NAMES: VariableName[] = ['A', 'B', 'C', 'D', 'E', 'F', 'x', 'y', 'z'];
@@ -60,7 +78,27 @@ function HistoryTool({ tr }: { tr: Tr }) {
   const insertText = useCalculatorStore((s) => s.insertText);
   const clearHistory = useCalculatorStore((s) => s.clearHistory);
   const after = useAfterAction();
+  const [copied, setCopied] = useState(false);
   const items = [...history].reverse();
+
+  const copyAll = () => {
+    const text = history.map((h) => `${h.expression} = ${h.result}`).join('\n');
+    void navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  const downloadCsv = () => {
+    const cell = (s: string) => `"${s.replace(/"/g, '""')}"`;
+    const csv = ['expression,result,value', ...history.map((h) => [cell(h.expression), cell(h.result), h.value].join(','))].join('\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'premt-history.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (!items.length) {
     return (
@@ -75,6 +113,8 @@ function HistoryTool({ tr }: { tr: Tr }) {
       <div className="toolRow">
         <span className="toolMuted">{items.length} {tr('phép tính', 'entries')}</span>
         <span className="toolSpacer" />
+        <button type="button" className="toolLink" onClick={copyAll}>{copied ? tr('Đã chép ✓', 'Copied ✓') : tr('Sao chép', 'Copy')}</button>
+        <button type="button" className="toolLink" onClick={downloadCsv}>CSV</button>
         <button type="button" className="toolLink toolDanger" onClick={clearHistory}>{tr('Xóa hết', 'Clear')}</button>
       </div>
       <ul className="toolList">
@@ -380,6 +420,13 @@ export function ToolsPanel({ language }: { language: Language }) {
   const open = useCalculatorStore((s) => s.toolsOpen);
   const setToolsOpen = useCalculatorStore((s) => s.setToolsOpen);
   const after = useAfterAction();
+  const [graphSeed, setGraphSeed] = useState<{ key: number; exprs: string[] } | null>(null);
+  const moreTab = MORE_TABS.find((t) => t.id === tab);
+
+  const plot = (exprs: string[]) => {
+    setGraphSeed({ key: Date.now(), exprs });
+    setTab('graph');
+  };
 
   return (
     <>
@@ -391,7 +438,7 @@ export function ToolsPanel({ language }: { language: Language }) {
           <button type="button" className="toolIconBtn toolsClose" aria-label={tr('Đóng', 'Close')} onClick={() => setToolsOpen(false)}>×</button>
         </div>
         <div className="toolsTabs" role="tablist">
-          {TABS.map((t) => (
+          {PRIMARY_TABS.map((t) => (
             <button
               type="button"
               role="tab"
@@ -404,12 +451,39 @@ export function ToolsPanel({ language }: { language: Language }) {
               {language === 'vi' ? t.vi : t.en}
             </button>
           ))}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!!moreTab || tab === 'more'}
+            className={`toolsTab toolsTabMore ${moreTab || tab === 'more' ? 'toolsTabActive' : ''}`}
+            onClick={() => setTab('more')}
+          >
+            <span className="toolsTabIcon" aria-hidden="true">{moreTab ? moreTab.icon : '⋯'}</span>
+            {moreTab ? (language === 'vi' ? moreTab.vi : moreTab.en) : tr('Thêm', 'More')}
+            <span aria-hidden="true" className="toolsTabCaret">▾</span>
+          </button>
         </div>
         <div className="toolsContent">
-          {tab === 'solve' && <SolveTool language={language} onDone={after} />}
+          {tab === 'more' && (
+            <div className="moreGrid">
+              {MORE_TABS.map((t) => (
+                <button type="button" key={t.id} className="moreCard" onClick={() => setTab(t.id)}>
+                  <span className="moreIcon" aria-hidden="true">{t.icon}</span>
+                  <span className="moreText">
+                    <strong>{language === 'vi' ? t.vi : t.en}</strong>
+                    <span>{language === 'vi' ? t.descVi : t.descEn}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {tab === 'solve' && <SolveTool language={language} onDone={after} onPlot={plot} />}
           {tab === 'history' && <HistoryTool tr={tr} />}
           {tab === 'variables' && <VariablesTool tr={tr} />}
-          {tab === 'graph' && <GraphTool language={language} />}
+          {tab === 'graph' && <GraphTool key={graphSeed?.key} seed={graphSeed?.exprs} language={language} />}
+          {tab === 'matrix' && <MatrixTool tr={tr} />}
+          {tab === 'table' && <TableTool tr={tr} />}
+          {tab === 'base' && <BaseTool tr={tr} after={after} />}
           {tab === 'constants' && <ConstantsTool tr={tr} language={language} />}
           {tab === 'units' && <UnitsTool tr={tr} language={language} />}
           {tab === 'number' && <NumberTool tr={tr} />}

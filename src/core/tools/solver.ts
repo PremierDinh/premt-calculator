@@ -41,8 +41,9 @@ function bisect(fn: RealFn, a: number, b: number, fa: number): number {
 }
 
 function polish(x: number): number {
-  const rounded = Math.round(x * 1e9) / 1e9;
-  return Math.abs(rounded) < 1e-12 ? 0 : rounded;
+  const nearest = Math.round(x);
+  if (Math.abs(x - nearest) < 1e-9) return nearest === 0 ? 0 : nearest;
+  return Number(x.toPrecision(15));
 }
 
 /** All real roots in [a, b]: sign changes are bisected, touching roots found at local minima of |f|. */
@@ -97,6 +98,40 @@ export function findRoots(fn: RealFn, a: number, b: number, samples = 4000): num
   }
 
   return roots.sort((p, q) => p - q);
+}
+
+export interface CriticalPoint {
+  x: number;
+  y: number;
+  kind: 'min' | 'max' | 'inflection';
+}
+
+/** Local extrema and inflection points of f in [a, b], from the roots of f′ and f″. */
+export function analyzeFunction(fn: RealFn, a: number, b: number): { roots: number[]; critical: CriticalPoint[] } {
+  const d1: RealFn = (x) => derivative(fn, x, 1e-5);
+  const d2: RealFn = (x) => (fn(x + 1e-4) - 2 * fn(x) + fn(x - 1e-4)) / 1e-8;
+  const critical: CriticalPoint[] = [];
+  const span = Math.abs(b - a);
+  const probe = span / 400;
+
+  for (const x of findRoots(d1, a, b, 2000)) {
+    const left = fn(x - probe);
+    const right = fn(x + probe);
+    const y = fn(x);
+    if (!Number.isFinite(y)) continue;
+    if (y < left && y < right) critical.push({ x, y: polish(y), kind: 'min' });
+    else if (y > left && y > right) critical.push({ x, y: polish(y), kind: 'max' });
+  }
+  for (const x of findRoots(d2, a, b, 2000)) {
+    const s1 = Math.sign(d2(x - probe));
+    const s2 = Math.sign(d2(x + probe));
+    const y = fn(x);
+    if (Number.isFinite(y) && s1 !== 0 && s2 !== 0 && s1 !== s2) {
+      const xr = Math.round(x * 1e6) / 1e6;
+      critical.push({ x: Math.abs(xr) < 1e-9 ? 0 : xr, y: polish(y), kind: 'inflection' });
+    }
+  }
+  return { roots: findRoots(fn, a, b), critical: critical.sort((p, q) => p.x - q.x) };
 }
 
 /** Adaptive Simpson integration. */

@@ -1,6 +1,7 @@
 import { t } from '../../i18n/strings';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { ThemeToggle } from './ThemeToggle';
 
 export function SiteHeader() {
   const language = useCalculatorStore((s) => s.settings.language);
@@ -19,7 +20,9 @@ export function SiteHeader() {
           <nav className="nav" aria-label={t(language, 'menu')}>
             <a href="#simulator">{t(language, 'simulator')}</a>
             <a href="#modes">{t(language, 'modes')}</a>
+            <a href="#faq">{language === 'vi' ? 'Hỏi đáp' : 'FAQ'}</a>
           </nav>
+          <ThemeToggle language={language} />
           <LanguageSwitcher />
         </div>
       </div>

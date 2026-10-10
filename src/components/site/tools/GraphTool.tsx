@@ -69,16 +69,15 @@ function formatTick(v: number, step: number): string {
   return Number(v.toFixed(digits)).toString().replace('-', '−');
 }
 
-export function GraphTool({ language }: { language: Language }) {
+export function GraphTool({ language, seed }: { language: Language; seed?: string[] }) {
   const tr = (vi: string, en: string) => (language === 'vi' ? vi : en);
   const variables = useCalculatorStore((s) => s.variables);
   const ans = useCalculatorStore((s) => s.ans);
   const insertText = useCalculatorStore((s) => s.insertText);
 
-  const [fns, setFns] = useState<GraphFn[]>([
-    { id: 1, expr: 'x^2-4', on: true },
-    { id: 2, expr: '2sin(x)', on: true },
-  ]);
+  const [fns, setFns] = useState<GraphFn[]>(() =>
+    (seed?.length ? seed : ['x^2-4', '2sin(x)']).map((expr, i) => ({ id: i + 1, expr, on: true })),
+  );
   const [view, setView] = useState<View>(DEFAULT_VIEW);
   const [angle, setAngle] = useState<'rad' | 'deg'>('rad');
   const [piAxis, setPiAxis] = useState(false);
