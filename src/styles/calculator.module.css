@@ -60,7 +60,7 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   grid-template-areas:
-    "on home menu up . pgup ."
+    "on home menu up . pgup panel"
     "set exit left ok right pgdn ."
     "alpha shift vkey func down cat tools";
   gap: 2px 4px;
@@ -85,6 +85,15 @@
 .areaDown { grid-area: down; }
 .areaCat { grid-area: cat; }
 .areaTools { grid-area: tools; }
+.areaPanel { grid-area: panel; }
+
+.keyWrapper.panelToggle {
+  display: none;
+}
+
+.keyPanel {
+  color: #2563eb;
+}
 
 .sciBlock {
   display: block;
@@ -184,9 +193,9 @@
   align-items: flex-start;
   width: 100%;
   margin-top: auto;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 700;
-  line-height: 8px;
+  line-height: 9px;
   padding-left: 3px;
   position: relative;
   z-index: 1;
@@ -310,6 +319,23 @@
   color: #fff;
 }
 
+.keyOnLayerShift {
+  box-shadow:
+    0 0 0 2px #2f8fd6,
+    0 3px 0 #9bb8b0;
+}
+
+.keyOnLayerAlpha {
+  box-shadow:
+    0 0 0 2px #c9a227,
+    0 3px 0 #9bb8b0;
+}
+
+.wrapperOffLayer {
+  opacity: 0.35;
+  transition: opacity 0.12s;
+}
+
 @media (max-width: 768px) {
   .page {
     width: 100%;
@@ -343,6 +369,10 @@
   .brandRow,
   .classwiz {
     display: none;
+  }
+
+  .keyWrapper.panelToggle {
+    display: flex;
   }
 
   .shell > * {

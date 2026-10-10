@@ -2,6 +2,7 @@ import styles from '../../styles/calculator.module.css';
 import { Key } from './Key';
 import { getKeyDefinition } from '../../core/keyMap';
 import type { KeyId } from '../../core/types';
+import { useCalculatorStore } from '../../store/calculatorStore';
 
 function K(id: KeyId, wrapperClass?: string) {
   const def = getKeyDefinition(id);
@@ -9,10 +10,38 @@ function K(id: KeyId, wrapperClass?: string) {
   return <Key key={id} definition={def} wrapperClass={wrapperClass} />;
 }
 
+function ToolsToggle() {
+  const toolsOpen = useCalculatorStore((s) => s.toolsOpen);
+  const setToolsOpen = useCalculatorStore((s) => s.setToolsOpen);
+  const language = useCalculatorStore((s) => s.settings.language);
+  const label = language === 'vi' ? 'Công cụ' : 'Tools';
+
+  return (
+    <div className={`${styles.keyWrapper} ${styles.areaPanel} ${styles.panelToggle}`}>
+      <span className={styles.legendRow}><span className={styles.caption}>{label}</span></span>
+      <button
+        type="button"
+        className={`${styles.key} ${styles.keyPanel}`}
+        aria-label={label}
+        aria-expanded={toolsOpen}
+        onClick={() => setToolsOpen(!toolsOpen)}
+      >
+        <svg viewBox="0 0 24 24" className={styles.glyph} aria-hidden="true">
+          <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M17 13.5v7M13.5 17h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 export function KeypadGrid() {
   return (
     <>
       <div className={styles.topDeck}>
+        <ToolsToggle />
         {K('ON', styles.areaOn)}
         {K('HOME', styles.areaHome)}
         {K('MENU', styles.areaMenu)}

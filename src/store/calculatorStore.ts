@@ -8,9 +8,10 @@ import { createInitialModeState, getModeDisplay, handleModeKey } from '../core/m
 import { applySetting, DEFAULT_SETTINGS, SETTINGS_ITEMS, type CalculatorSettings, type Language } from '../core/settings';
 import { cycleFormat, formatValue } from '../core/format';
 import { applyCatalogItem, getCatalog, getTools } from '../core/catalog';
-import { settingLabel, t } from '../i18n/strings';
+import { settingLabel, settingValueLabel, t } from '../i18n/strings';
 import { insertAtCursor } from '../math/expression';
 import { buildQrPayload, encodeQrDataUrl } from '../qr';
+import { createStatisticsState } from '../core/modes/statistics';
 
 const DEFAULT_VARS: Record<VariableName, number> = {
   A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, x: 0, y: 0, z: 0,
@@ -38,6 +39,7 @@ interface CalculatorStore {
   lastInputAt: number;
   qrPayload: string | null;
   qrImageDataUrl: string | null;
+  toolsOpen: boolean;
 
   getContext: () => KeyContext;
   refreshDisplay: () => void;
@@ -45,6 +47,12 @@ interface CalculatorStore {
   releaseKey: () => void;
   navigateToMode: (mode: ModeId) => void;
   selectHomeItem: (index: number) => void;
+  setToolsOpen: (open: boolean) => void;
+  insertText: (text: string) => void;
+  loadExpression: (expression: string) => void;
+  loadStatData: (values: number[]) => void;
+  setVariable: (name: VariableName, value: number) => void;
+  clearHistory: () => void;
   openSettingsOverlay: () => void;
   setLanguage: (language: Language) => void;
 }
@@ -151,7 +159,7 @@ function buildDisplay(state: CalculatorStore): DisplayState {
 
   if (state.overlay === 'settings') {
     const item = SETTINGS_ITEMS[state.overlayIndex];
-    const value = String(state.settings[item.key]);
+    const value = settingValueLabel(state.settings.language, state.settings[item.key]);
     return {
       lines: [
         { text: t(state.settings.language, 'settings'), size: 'small' },
@@ -256,6 +264,17 @@ function makeContext(state: CalculatorStore): KeyContext {
   };
 }
 
+function enterCalculate(): Partial<CalculatorStore> {
+  return {
+    power: 'on',
+    currentMode: 'calculate',
+    overlay: 'none',
+    shiftActive: false,
+    alphaActive: false,
+    lastInputAt: Date.now(),
+  };
+}
+
 export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   power: 'on',
   currentMode: 'home',
@@ -278,6 +297,7 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
   lastInputAt: Date.now(),
   qrPayload: null,
   qrImageDataUrl: null,
+  toolsOpen: false,
 
   getContext: () => makeContext(get()),
 
@@ -502,6 +522,71 @@ export const useCalculatorStore = create<CalculatorStore>((set, get) => ({
       lastInputAt: Date.now(),
       modeState: { ...s.modeState, home: { selectedIndex: index, scrollRow: Math.floor(index / 3) } },
     });
+    get().refreshDisplay();
+  },
+
+  setToolsOpen: (open: boolean) => set({ toolsOpen: open }),
+
+  insertText: (text: string) => {
+    const s = get();
+    const calc = s.modeState.calculate;
+    const base = calc.showResult || s.currentMode !== 'calculate' ? { expression: '', cursorPos: 0 } : calc;
+    const prev = base.expression[base.cursorPos - 1] ?? '';
+    const joined = /[\d.)]/.test(prev) && /^[\d.(A-Za-z]/.test(text) ? `×${text}` : text;
+    const { text: expression, cursor } = insertAtCursor(base.expression, joined, base.cursorPos);
+    set({
+      ...enterCalculate(),
+      modeState: {
+        ...s.modeState,
+        calculate: { ...calc, expression, cursorPos: cursor, showResult: false, variableMode: 'none', historyIndex: -1 },
+      },
+    });
+    get().refreshDisplay();
+  },
+
+  loadExpression: (expression: string) => {
+    const s = get();
+    set({
+      ...enterCalculate(),
+      modeState: {
+        ...s.modeState,
+        calculate: {
+          ...s.modeState.calculate,
+          expression,
+          cursorPos: expression.length,
+          showResult: false,
+          variableMode: 'none',
+          historyIndex: -1,
+        },
+      },
+    });
+    get().refreshDisplay();
+  },
+
+  loadStatData: (values: number[]) => {
+    const s = get();
+    set({
+      ...enterCalculate(),
+      currentMode: 'statistics',
+      modeState: {
+        ...s.modeState,
+        statistics: {
+          ...createStatisticsState(),
+          screen: 'data-input',
+          data: values.map((x) => ({ x, freq: 1 })),
+        },
+      },
+    });
+    get().refreshDisplay();
+  },
+
+  setVariable: (name: VariableName, value: number) => {
+    set((s) => ({ variables: { ...s.variables, [name]: value } }));
+    get().refreshDisplay();
+  },
+
+  clearHistory: () => {
+    set({ history: [] });
     get().refreshDisplay();
   },
 

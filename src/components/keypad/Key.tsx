@@ -17,9 +17,19 @@ export function Key({ definition, className, wrapperClass }: KeyProps) {
   const pressedKey = useCalculatorStore((s) => s.pressedKey);
   const shiftActive = useCalculatorStore((s) => s.shiftActive);
   const alphaActive = useCalculatorStore((s) => s.alphaActive);
+  const legendsAlways = useCalculatorStore((s) => s.settings.keyLegends === 'all');
 
   const { id, label, shiftLabel, alphaLabel, caption, variant = 'default' } = definition;
   const isPressed = pressedKey === id;
+  const showShift = Boolean(shiftLabel) && (legendsAlways || shiftActive);
+  const showAlpha = Boolean(alphaLabel) && (legendsAlways || alphaActive);
+  const isModifier = variant === 'shift' || variant === 'alpha';
+  const layerClass = isModifier
+    ? ''
+    : shiftActive
+      ? shiftLabel ? styles.keyOnLayerShift : ''
+      : alphaActive && alphaLabel ? styles.keyOnLayerAlpha : '';
+  const offLayer = !isModifier && ((shiftActive && !shiftLabel) || (!shiftActive && alphaActive && !alphaLabel));
 
   const variantClass =
     variant === 'shift'
@@ -36,7 +46,7 @@ export function Key({ definition, className, wrapperClass }: KeyProps) {
                 ? styles.keyNav
                 : '';
 
-  const shiftNode = shiftLabel
+  const shiftNode = showShift && shiftLabel
     ? (
       <span className={styles.shiftLabel}>
         {shiftLabel === 'OFF'
@@ -49,7 +59,7 @@ export function Key({ definition, className, wrapperClass }: KeyProps) {
     )
     : null;
 
-  const alphaNode = alphaLabel
+  const alphaNode = showAlpha && alphaLabel
     ? (
       <span className={styles.alphaLabel}>
         {alphaLabel}
@@ -73,11 +83,11 @@ export function Key({ definition, className, wrapperClass }: KeyProps) {
     : <span className={styles.legendEmpty} />;
 
   return (
-    <div className={[styles.keyWrapper, wrapperClass ?? ''].filter(Boolean).join(' ')}>
+    <div className={[styles.keyWrapper, wrapperClass ?? '', offLayer ? styles.wrapperOffLayer : ''].filter(Boolean).join(' ')}>
       {legend}
       <button
         type="button"
-        className={[styles.key, variantClass, isPressed ? styles.keyPressed : '', className ?? '']
+        className={[styles.key, variantClass, layerClass, isPressed ? styles.keyPressed : '', className ?? '']
           .filter(Boolean)
           .join(' ')}
         aria-label={caption ? `${caption} ${label}` : [shiftLabel, alphaLabel, label].filter(Boolean).join(' ')}

@@ -16,6 +16,24 @@ describe('calculatorStore', () => {
     });
   });
 
+  it('inserts tool values into the expression with implicit multiplication', () => {
+    const s = useCalculatorStore.getState();
+    s.pressKey('TWO');
+    s.insertText('9.80665');
+    expect(useCalculatorStore.getState().modeState.calculate.expression).toBe('2×9.80665');
+    s.pressKey('EXE');
+    expect(useCalculatorStore.getState().ans).toBeCloseTo(19.6133);
+    s.insertText('A');
+    expect(useCalculatorStore.getState().modeState.calculate.expression).toBe('A');
+  });
+
+  it('loads pasted data into the statistics app', () => {
+    useCalculatorStore.getState().loadStatData([1, 2, 3]);
+    const state = useCalculatorStore.getState();
+    expect(state.currentMode).toBe('statistics');
+    expect(state.modeState.statistics.data.map((r) => r.x)).toEqual([1, 2, 3]);
+  });
+
   it('toggles shift', () => {
     useCalculatorStore.getState().pressKey('SHIFT');
     expect(useCalculatorStore.getState().shiftActive).toBe(true);

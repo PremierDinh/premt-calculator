@@ -17,9 +17,8 @@ export function SiteHeader() {
         </a>
         <div className="headerActions">
           <nav className="nav" aria-label={t(language, 'menu')}>
-            <a href="#modes">{t(language, 'modes')}</a>
             <a href="#simulator">{t(language, 'simulator')}</a>
-            <a href="#guide">{t(language, 'guide')}</a>
+            <a href="#modes">{t(language, 'modes')}</a>
           </nav>
           <LanguageSwitcher />
         </div>

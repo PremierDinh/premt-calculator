@@ -26,6 +26,8 @@ export interface CalculatorSettings {
   autoPowerOffMin: number;
   language: Language;
   fractionOutput: boolean;
+  /** 'auto' shows SHIFT/ALPHA legends only while that layer is active. */
+  keyLegends: 'auto' | 'all';
 }
 
 export const DEFAULT_SETTINGS: CalculatorSettings = {
@@ -43,6 +45,7 @@ export const DEFAULT_SETTINGS: CalculatorSettings = {
   autoPowerOffMin: 10,
   language: 'vi',
   fractionOutput: true,
+  keyLegends: 'auto',
 };
 
 export const SETTINGS_ITEMS: Array<{ key: keyof CalculatorSettings; values?: unknown[] }> = [
@@ -59,6 +62,7 @@ export const SETTINGS_ITEMS: Array<{ key: keyof CalculatorSettings; values?: unk
   { key: 'contrast', values: [1, 2, 3, 4, 5] },
   { key: 'autoPowerOffMin', values: [5, 10, 30, 60] },
   { key: 'language', values: ['vi', 'en'] },
+  { key: 'keyLegends', values: ['auto', 'all'] },
 ];
 
 export function cycleValue<T>(values: T[], current: T): T {

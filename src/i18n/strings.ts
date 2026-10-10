@@ -124,6 +124,7 @@ const SETTING_LABELS_VI: Record<string, string> = {
   contrast: 'Độ tương phản',
   autoPowerOffMin: 'Tự tắt (phút)',
   language: 'Ngôn ngữ',
+  keyLegends: 'Nhãn phím phụ',
 };
 
 const SETTING_LABELS_EN: Record<string, string> = {
@@ -140,11 +141,31 @@ const SETTING_LABELS_EN: Record<string, string> = {
   contrast: 'Contrast',
   autoPowerOffMin: 'Auto off (min)',
   language: 'Language',
+  keyLegends: 'Key legends',
 };
 
 export function settingLabel(lang: Language, key: string): string {
   const map = lang === 'en' ? SETTING_LABELS_EN : SETTING_LABELS_VI;
   return map[key] ?? key;
+}
+
+const SETTING_VALUES_VI: Record<string, string> = {
+  true: 'Bật',
+  false: 'Tắt',
+  auto: 'Khi bấm SHIFT/ALPHA',
+  all: 'Luôn hiện',
+};
+
+const SETTING_VALUES_EN: Record<string, string> = {
+  true: 'On',
+  false: 'Off',
+  auto: 'On SHIFT/ALPHA',
+  all: 'Always',
+};
+
+export function settingValueLabel(lang: Language, value: unknown): string {
+  const raw = String(value);
+  return (lang === 'en' ? SETTING_VALUES_EN : SETTING_VALUES_VI)[raw] ?? raw;
 }
 
 const MODE_BLURBS_VI: Record<Exclude<ModeId, 'home'>, string> = {

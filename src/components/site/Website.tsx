@@ -1,8 +1,8 @@
 import { CalculatorShell } from '../CalculatorShell';
-import { GuidePanel } from './GuidePanel';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
-import { LIVE_DEMO_URL, modeBlurb, t } from '../../i18n/strings';
+import { ToolsPanel } from './ToolsPanel';
+import { modeBlurb, t } from '../../i18n/strings';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import type { ModeId } from '../../core/types';
 
@@ -10,6 +10,19 @@ const MODE_KEYS = [
   'calculate', 'statistics', 'distribution', 'spreadsheet', 'table', 'equation',
   'inequality', 'complex', 'basen', 'matrix', 'vector', 'ratio', 'mathbox',
 ] as const;
+
+const EXTRA_TIPS = {
+  vi: [
+    'Bấm SHIFT hoặc ALPHA: các phím có chức năng phụ sẽ sáng viền và hiện nhãn, phím không dùng được sẽ mờ đi.',
+    'Bảng Công cụ → Giải: gõ phương trình như x^3-6x^2+11x=6 để tìm mọi nghiệm, tính tích phân hoặc đạo hàm, rồi Chèn kết quả vào máy.',
+    'Muốn luôn thấy nhãn phụ trên phím: SETTINGS → Nhãn phím phụ → Luôn hiện.',
+  ],
+  en: [
+    'Press SHIFT or ALPHA: keys with a second function get outlined and labelled, unused keys fade out.',
+    'Tools → Solve: type an equation like x^3-6x^2+11x=6 to find every root, integrate or differentiate, then Insert the result.',
+    'To always see the small key legends: SETTINGS → Key legends → Always.',
+  ],
+};
 
 export function Website() {
   const language = useCalculatorStore((s) => s.settings.language);
@@ -28,31 +41,18 @@ export function Website() {
       <SiteHeader />
 
       <main>
-        <section className="hero">
-          <div className="sectionInner heroInner">
-            <div>
-              <div className="heroBrand">
-                <img src={`${import.meta.env.BASE_URL}premt-logo.jpg`} alt="PREM" className="heroLogo" />
-                <p className="kicker">{t(language, 'brand')}</p>
-              </div>
+        <section className="intro" id="simulator">
+          <div className="sectionInner">
+            <div className="introHead">
               <h1>{t(language, 'siteTitle')}</h1>
               <p className="lede">{t(language, 'siteLead')}</p>
-              <div className="heroActions">
-                <a className="btn btnPrimary" href="#simulator">{t(language, 'openSim')}</a>
-                <a className="btn btnGhost" href="#guide">{t(language, 'seeGuide')}</a>
-                <a className="btn btnGhost" href={LIVE_DEMO_URL} target="_blank" rel="noreferrer">
-                  {t(language, 'liveDemo')}
-                </a>
+            </div>
+            <div className="simulatorLayout">
+              <CalculatorShell />
+              <div className="simSide">
+                <ToolsPanel language={language} />
               </div>
             </div>
-            <aside className="heroCard">
-              <h2>{t(language, 'simulator')}</h2>
-              <ol>
-                {heroTips.map((key) => (
-                  <li key={key}>{t(language, key)}</li>
-                ))}
-              </ol>
-            </aside>
           </div>
         </section>
 
@@ -73,17 +73,17 @@ export function Website() {
                 </button>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="section" id="simulator">
-          <div className="sectionInner">
-            <h2>{t(language, 'simulator')}</h2>
-            <p className="sectionIntro">{t(language, 'simIntro')}</p>
-            <div className="simulatorLayout">
-              <CalculatorShell />
-              <GuidePanel language={language} />
-            </div>
+            <details className="tipsBox" id="guide">
+              <summary>{language === 'vi' ? 'Mẹo sử dụng' : 'Tips'}</summary>
+              <ol>
+                {heroTips.map((key) => (
+                  <li key={key}>{t(language, key)}</li>
+                ))}
+                {EXTRA_TIPS[language].map((tip) => (
+                  <li key={tip}>{tip}</li>
+                ))}
+              </ol>
+            </details>
           </div>
         </section>
       </main>
