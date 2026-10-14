@@ -315,6 +315,14 @@
   line-height: 10px;
 }
 
+.key,
+.dpadArrow,
+.dpadOk {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
 .key {
   width: 100%;
   aspect-ratio: 1;

@@ -2,6 +2,7 @@ import styles from '../../styles/calculator.module.css';
 import type { KeyDefinition, KeyId } from '../../core/types';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import { GLYPH_KEYS, KeyGlyph, ShiftMark } from './KeyGlyph';
+import { usePressHandlers } from './usePressHandlers';
 
 interface KeyProps {
   definition: KeyDefinition;
@@ -12,8 +13,7 @@ interface KeyProps {
 const ICON_SHIFTS = new Set(['RECUR', 'ROOTN', 'INV', 'MIXED', 'CYCLE', 'LIST', 'PREANS']);
 
 export function Key({ definition, className, wrapperClass }: KeyProps) {
-  const pressKey = useCalculatorStore((s) => s.pressKey);
-  const releaseKey = useCalculatorStore((s) => s.releaseKey);
+  const pressHandlers = usePressHandlers(definition.id as KeyId);
   const pressedKey = useCalculatorStore((s) => s.pressedKey);
   const shiftActive = useCalculatorStore((s) => s.shiftActive);
   const alphaActive = useCalculatorStore((s) => s.alphaActive);
@@ -91,14 +91,7 @@ export function Key({ definition, className, wrapperClass }: KeyProps) {
           .filter(Boolean)
           .join(' ')}
         aria-label={caption ? `${caption} ${label}` : [shiftLabel, alphaLabel, label].filter(Boolean).join(' ')}
-        onMouseDown={() => pressKey(id as KeyId)}
-        onMouseUp={releaseKey}
-        onMouseLeave={releaseKey}
-        onTouchStart={(e) => {
-          e.preventDefault();
-          pressKey(id as KeyId);
-        }}
-        onTouchEnd={releaseKey}
+        {...pressHandlers}
       >
         {GLYPH_KEYS.includes(id) ? <KeyGlyph id={id} /> : <span>{label}</span>}
       </button>

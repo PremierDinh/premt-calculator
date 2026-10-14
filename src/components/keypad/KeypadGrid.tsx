@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import styles from '../../styles/calculator.module.css';
 import { Key } from './Key';
 import { KeyGlyph } from './KeyGlyph';
+import { usePressHandlers } from './usePressHandlers';
 import { getKeyDefinition } from '../../core/keyMap';
 import type { KeyId } from '../../core/types';
 import { useCalculatorStore } from '../../store/calculatorStore';
@@ -40,8 +41,7 @@ function ToolsToggle() {
 }
 
 function PadButton({ id, className, children }: { id: KeyId; className: string; children: ReactNode }) {
-  const pressKey = useCalculatorStore((s) => s.pressKey);
-  const releaseKey = useCalculatorStore((s) => s.releaseKey);
+  const pressHandlers = usePressHandlers(id);
   const pressed = useCalculatorStore((s) => s.pressedKey === id);
 
   return (
@@ -49,14 +49,7 @@ function PadButton({ id, className, children }: { id: KeyId; className: string; 
       type="button"
       className={`${className} ${pressed ? styles.dpadPressed : ''}`}
       aria-label={id}
-      onMouseDown={() => pressKey(id)}
-      onMouseUp={releaseKey}
-      onMouseLeave={releaseKey}
-      onTouchStart={(e) => {
-        e.preventDefault();
-        pressKey(id);
-      }}
-      onTouchEnd={releaseKey}
+      {...pressHandlers}
     >
       {children}
     </button>
