@@ -11,9 +11,9 @@ function ineq(text: string, a = -10, b = 10) {
 
 describe('solveLinearSystem', () => {
   it('solves 2×2 and 3×3 systems', () => {
-    expect(solveLinearSystem(['2x+y=5', 'x-y=1'], ctx)).toEqual({ kind: 'unique', vars: ['x', 'y'], values: [2, 1] });
+    expect(solveLinearSystem(['2x+y=5', 'x-y=1'], ctx)).toMatchObject({ kind: 'unique', vars: ['x', 'y'], values: [2, 1] });
     const r = solveLinearSystem(['2x+y-z=8', '-3x-y+2z=-11', '-2x+y+2z=-3'], ctx);
-    expect(r).toEqual({ kind: 'unique', vars: ['x', 'y', 'z'], values: [2, 3, -1] });
+    expect(r).toMatchObject({ kind: 'unique', vars: ['x', 'y', 'z'], values: [2, 3, -1] });
   });
 
   it('accepts unsimplified linear forms', () => {

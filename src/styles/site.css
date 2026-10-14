@@ -491,6 +491,47 @@ button.solveAngle {
   word-break: normal;
 }
 
+.solveSteps {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-alt);
+  padding: 10px 14px;
+}
+
+.solveSteps summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.solveSteps ol {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.solveSteps li {
+  display: grid;
+  gap: 3px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+}
+
+.solveStepTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.solveStepLine {
+  font-family: 'Cambria Math', 'Times New Roman', Georgia, serif;
+  font-size: 15px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
 .baseValue {
   font-size: 14px;
   word-break: break-all;

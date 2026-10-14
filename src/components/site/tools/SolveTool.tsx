@@ -18,6 +18,7 @@ import {
   solveLinearSystem,
   type Interval,
 } from '../../../core/tools/solver';
+import { equationSteps, inequalitySteps, systemSteps, type Step } from '../../../core/tools/steps';
 
 type SolveMode = 'eval' | 'equation' | 'system' | 'inequality' | 'analyze' | 'integral' | 'derivative';
 type Angle = 'deg' | 'rad';
@@ -106,6 +107,7 @@ interface Outcome {
   note?: string;
   error?: string;
   plot?: string[];
+  steps?: Step[];
 }
 
 function approx(v: number): string {
@@ -194,22 +196,26 @@ function solve(mode: SolveMode, expr: string, a: string, b: string, ctx: EvalCon
       }
       const r = solveLinearSystem(lines, ctx);
       if (r.kind === 'nonlinear') return { values: [], error: tr('Chỉ hỗ trợ hệ bậc nhất. Hệ phi tuyến: dùng Phương trình sau khi thế.', 'Only linear systems are supported.') };
+      const steps = systemSteps(r.augmented, r.vars, tr);
       if (r.kind !== 'unique') {
         return {
           values: [],
           lines: [r.kind === 'none' ? tr('Hệ vô nghiệm.', 'The system has no solution.') : tr('Hệ có vô số nghiệm.', 'The system has infinitely many solutions.')],
+          steps,
         };
       }
       const solution = r.values;
-      return { values: r.vars.map((v, i) => ({ label: v, value: solution[i] })) };
+      return { values: r.vars.map((v, i) => ({ label: v, value: solution[i] })), steps };
     }
     if (mode === 'inequality') {
       const parsed = parseInequality(expr);
       if (!parsed) return { values: [], error: tr('Nhập dạng f(x) < g(x), dùng <, >, <=, >=.', 'Use the form f(x) < g(x) with <, >, <=, >=.') };
       const lo = evalBound(a, ctx);
       const hi = evalBound(b, ctx);
-      const intervals = solveInequality(compileFunction(parsed.expr, ctx), parsed.op, lo, hi);
+      const g = compileFunction(parsed.expr, ctx);
+      const intervals = solveInequality(g, parsed.op, lo, hi);
       return {
+        steps: inequalitySteps(g, parsed.op, tr) ?? undefined,
         values: [],
         lines: [intervals.length ? `x ∈ ${formatIntervals(intervals, Math.min(lo, hi), Math.max(lo, hi))}` : tr('Vô nghiệm trong khoảng xét.', 'No solution in this range.')],
         note: tr(`Xét trên [${a}; ${b}] — ±∞ nghĩa là kéo dài tới biên khoảng xét.`, `Checked on [${a}, ${b}] — ±∞ means the set reaches the edge of the range.`),
@@ -223,13 +229,15 @@ function solve(mode: SolveMode, expr: string, a: string, b: string, ctx: EvalCon
     const fn = compileFunction(expr, ctx);
     if (mode === 'equation') {
       const roots = findRoots(fn, evalBound(a, ctx), evalBound(b, ctx));
+      const steps = equationSteps(fn, tr) ?? undefined;
       if (!roots.length) {
-        return { values: [], note: tr('Không tìm thấy nghiệm thực trong khoảng này. Thử mở rộng khoảng.', 'No real roots in this range. Try a wider range.'), plot: sides(expr) };
+        return { values: [], note: tr('Không tìm thấy nghiệm thực trong khoảng này. Thử mở rộng khoảng.', 'No real roots in this range. Try a wider range.'), plot: sides(expr), steps };
       }
       return {
         values: roots.map((r, i) => ({ label: roots.length > 1 ? `x${SUBSCRIPTS[i] ?? i + 1}` : 'x', value: r })),
         note: tr(`${roots.length} nghiệm trong [${a}; ${b}]`, `${roots.length} root(s) in [${a}, ${b}]`),
         plot: sides(expr),
+        steps,
       };
     }
     if (expr.includes('=')) return { values: [], error: tr('Nhập biểu thức f(x), không dùng dấu =', 'Enter f(x) without "="') };
@@ -532,6 +540,22 @@ export function SolveTool({
             </button>
           )}
         </div>
+      )}
+
+      {outcome.steps && outcome.steps.length > 0 && (
+        <details className="solveSteps" open>
+          <summary>{tr('Lời giải từng bước', 'Step-by-step solution')}</summary>
+          <ol>
+            {outcome.steps.map((step, i) => (
+              <li key={i}>
+                <span className="solveStepTitle">{tr(`Bước ${i + 1}.`, `Step ${i + 1}.`)} {step.title}</span>
+                {step.lines.map((line, j) => (
+                  <span className="solveStepLine" key={j}>{line}</span>
+                ))}
+              </li>
+            ))}
+          </ol>
+        </details>
       )}
     </div>
   );

@@ -138,9 +138,10 @@ export function analyzeFunction(fn: RealFn, a: number, b: number): { roots: numb
 const SYSTEM_VARS = ['x', 'y', 'z'] as const;
 type SystemVar = (typeof SYSTEM_VARS)[number];
 
+/** `augmented` rows are [coefficients…, right-hand side]. */
 export type LinearSystemResult =
-  | { kind: 'unique'; vars: SystemVar[]; values: number[] }
-  | { kind: 'none' | 'infinite'; vars: SystemVar[] }
+  | { kind: 'unique'; vars: SystemVar[]; values: number[]; augmented: number[][] }
+  | { kind: 'none' | 'infinite'; vars: SystemVar[]; augmented: number[][] }
   | { kind: 'nonlinear' };
 
 /** Solves 2–3 linear equations in x, y (, z). Coefficients are probed numerically, so any linear form is accepted. */
@@ -177,11 +178,12 @@ export function solveLinearSystem(lines: string[], ctx: EvalContext): LinearSyst
     }
   }
 
-  const reduced = rref(rows.map(({ c, coeffs }) => [...coeffs, -c]));
+  const augmented = rows.map(({ c, coeffs }) => [...coeffs, -c].map(polish));
+  const reduced = rref(augmented);
   const n = vars.length;
-  if (reduced.pivots.includes(n)) return { kind: 'none', vars };
-  if (reduced.rank < n) return { kind: 'infinite', vars };
-  return { kind: 'unique', vars, values: reduced.matrix.slice(0, n).map((row) => polish(row[n])) };
+  if (reduced.pivots.includes(n)) return { kind: 'none', vars, augmented };
+  if (reduced.rank < n) return { kind: 'infinite', vars, augmented };
+  return { kind: 'unique', vars, values: reduced.matrix.slice(0, n).map((row) => polish(row[n])), augmented };
 }
 
 export type InequalityOp = '<' | '<=' | '>' | '>=';
