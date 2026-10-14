@@ -62,7 +62,7 @@
   grid-template-areas:
     "on home menu dpad pgup cat"
     "set exit func dpad pgdn tools"
-    "alpha shift vkey dpad . panel";
+    "alpha shift vkey dpad pi panel";
   gap: 2px 4px;
   margin: 2px 0 8px;
 }
@@ -82,6 +82,13 @@
 .areaCat { grid-area: cat; }
 .areaTools { grid-area: tools; }
 .areaPanel { grid-area: panel; }
+.areaPi { grid-area: pi; }
+
+.topDeck .areaPi .key {
+  font-family: 'Times New Roman', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+}
 
 .dpadWrap {
   display: flex;

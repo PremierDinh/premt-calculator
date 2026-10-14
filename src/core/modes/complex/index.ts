@@ -34,7 +34,7 @@ export function handleComplexKey(
     ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
     FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9',
     DOT: '.', PLUS: '+', MINUS: '-', MULT: '×', DIV: '÷',
-    LPAREN: '(', RPAREN: ')', X: 'i', ANS: 'Ans',
+    LPAREN: '(', RPAREN: ')', X: 'i', ANS: 'Ans', PI: 'pi',
     SIN: 're(', COS: 'im(', TAN: 'arg(', LOG: 'conj(', SQRT: 'polar(',
   };
   if (key === 'AC') return { state: createComplexState(), result: { handled: true } };

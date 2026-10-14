@@ -98,13 +98,13 @@ const KEY_INSERT: Partial<Record<KeyId, string>> = {
   LPAREN: '(', RPAREN: ')', POWER: '^', SQUARE: '^2',
   SIN: 'sin(', COS: 'cos(', TAN: 'tan(', LOG: 'log(',
   SQRT: 'sqrt(', X: 'x', ANS: 'Ans', EXP10: '*10^',
-  FUNCTION: 'f(',
+  FUNCTION: 'f(', PI: 'pi',
 };
 
 const SHIFT_INSERT: Partial<Record<KeyId, string>> = {
   SQRT: 'root(', POWER: '^(-1)', SQUARE: 'log(',
   LOG: 'ln(', ANS: 'PreAns', SIN: 'asin(', COS: 'acos(', TAN: 'atan(',
-  SEVEN: 'pi', EIGHT: 'e', NINE: 'i',
+  SEVEN: 'pi', EIGHT: 'e', NINE: 'i', PI: 'e',
   RPAREN: ',', FUNCTION: 'd(',
   DIV: '%', MINUS: '(-', PLUS: 'dms(',
 };

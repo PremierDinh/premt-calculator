@@ -87,6 +87,7 @@ export function KeypadGrid() {
         {K('SHIFT', styles.areaShift)}
         {K('VARIABLE', styles.areaVar)}
         {K('FUNCTION', styles.areaFunc)}
+        {K('PI', styles.areaPi)}
         {K('CATALOG', styles.areaCat)}
         {K('TOOLS', styles.areaTools)}
       </div>

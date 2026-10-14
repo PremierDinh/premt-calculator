@@ -51,6 +51,7 @@ export const KEY_DEFINITIONS: KeyDefinition[] = [
   { id: 'DIV', label: '÷', shiftLabel: '%', variant: 'default' },
   { id: 'PLUS', label: '+', shiftLabel: '°′″', variant: 'default' },
   { id: 'MINUS', label: '−', shiftLabel: '(−)', variant: 'default' },
+  { id: 'PI', label: 'π', shiftLabel: 'e', variant: 'default' },
 ];
 
 export const KEYBOARD_MAP: Record<string, KeyId> = {
@@ -62,7 +63,7 @@ export const KEYBOARD_MAP: Record<string, KeyId> = {
   '(': 'LPAREN', ')': 'RPAREN', '^': 'POWER',
   'PageUp': 'PAGEUP', 'PageDown': 'PAGEDOWN',
   'Home': 'HOME', 'End': 'EXIT',
-  's': 'SHIFT', 'a': 'ALPHA', 'm': 'MENU',
+  's': 'SHIFT', 'a': 'ALPHA', 'm': 'MENU', 'p': 'PI',
   'Delete': 'DEL',
 };
 

@@ -76,7 +76,8 @@ export type KeyId =
   | 'MULT'
   | 'DIV'
   | 'PLUS'
-  | 'MINUS';
+  | 'MINUS'
+  | 'PI';
 
 export type VariableName = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'x' | 'y' | 'z';
 
