@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, prefersMathInput, type CalculatorSettings, type Langu
 import { formatNumber, formatValue, localizeNumber, shouldPreferFraction } from '../../format';
 import { exactQuadraticRoots } from '../../exactForm';
 import { toFraction } from '../../../math/fraction';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 export function createEquationState(): EquationState {
   return {
@@ -222,7 +223,7 @@ function solveGeneral(coeff: number, constant: number, settings: CalculatorSetti
 }
 
 function computeResult(state: EquationState, settings: CalculatorSettings, lang: Language): string {
-  const vals = state.coefficients.map((c) => parseFloat(c) || 0);
+  const vals = state.coefficients.map((c) => evalNumericInput(c) ?? 0);
   switch (state.eqnType) {
     case 'quadratic': return solveQuadratic(vals[0], vals[1], vals[2], settings, lang);
     case 'cubic': return solveCubic(vals[0], vals[1], vals[2], vals[3], settings, lang);
@@ -272,11 +273,10 @@ export function handleEquationKey(
   key: KeyId,
   ctx: KeyContext,
 ): { state: EquationState; result: ModeResult } {
-  const numKeys: Partial<Record<KeyId, string>> = {
-    ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
-    FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
-  };
-  const handled = (next: EquationState) => ({ state: next, result: { handled: true } });
+  const handled = (next: EquationState, extra: Partial<ModeResult> = {}) => ({
+    state: next,
+    result: { handled: true, ...extra },
+  });
   const withType = (eqnType: EqnType) => handled({ ...state, eqnType, coefficients: coefficientsFor(eqnType) });
 
   if (key === 'AC') return handled(createEquationState());
@@ -294,15 +294,18 @@ export function handleEquationKey(
 
   if (state.screen === 'input') {
     if (key === 'DEL') return handled({ ...state, inputBuffer: state.inputBuffer.slice(0, -1) });
-    if (numKeys[key]) return handled({ ...state, inputBuffer: state.inputBuffer + numKeys[key] });
-    if (key === 'MINUS' && state.inputBuffer === '') return handled({ ...state, inputBuffer: '-' });
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return handled({ ...state, inputBuffer: `${state.inputBuffer}e` }, { consumeShift: true });
+    }
+    const exprToken = appendNumericKey(state.inputBuffer, key);
+    if (exprToken !== null) return handled({ ...state, inputBuffer: exprToken });
     if (key === 'UP' || key === 'LEFT') {
       return handled({ ...state, coeffIndex: Math.max(0, state.coeffIndex - 1), inputBuffer: '' });
     }
     if (key === 'EXE' || key === 'DOWN' || key === 'RIGHT') {
       const labels = COEFF_LABELS[state.eqnType];
       const coefficients = [...state.coefficients];
-      if (state.inputBuffer && Number.isFinite(parseFloat(state.inputBuffer))) {
+      if (state.inputBuffer && evalNumericInput(state.inputBuffer) !== null) {
         coefficients[state.coeffIndex] = state.inputBuffer;
       }
       if (state.coeffIndex < labels.length - 1) {

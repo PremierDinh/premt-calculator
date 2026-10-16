@@ -1,6 +1,7 @@
 import type { DisplayState, KeyContext, KeyId, ModeResult, StatisticsState } from '../../types';
 import { DEFAULT_SETTINGS, prefersMathInput, type CalculatorSettings } from '../../settings';
 import { formatNumber } from '../../format';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 export const CALC_OPTIONS_1VAR = ['n', 'x̄', 'Σx', 'Σx²', 'σx', 'sx', 'minX', 'Q1', 'Med', 'Q3', 'maxX'];
 export const CALC_OPTIONS_2VAR = ['n', 'x̄', 'ȳ', 'Σx', 'Σy', 'Σxy', 'σx', 'σy', 'a', 'b', 'r'];
@@ -196,10 +197,6 @@ export function handleStatisticsKey(
   key: KeyId,
   ctx: KeyContext,
 ): { state: StatisticsState; result: ModeResult } {
-  const numKeys: Partial<Record<KeyId, string>> = {
-    ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
-    FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
-  };
   const handled = (next: StatisticsState, extra: Partial<ModeResult> = {}) => ({ state: next, result: { handled: true, ...extra } });
 
   if (key === 'AC') return handled(createStatisticsState());
@@ -216,12 +213,17 @@ export function handleStatisticsKey(
       if (state.inputField === 'y') return handled({ ...state, data: state.data.slice(0, -1), inputField: 'x' });
       return handled({ ...state, data: state.data.slice(0, -1) });
     }
-    if (numKeys[key]) return handled({ ...state, inputBuffer: state.inputBuffer + numKeys[key] });
-    if (key === 'MINUS' && state.inputBuffer === '') return handled({ ...state, inputBuffer: '-' });
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return handled({ ...state, inputBuffer: `${state.inputBuffer}e` }, { consumeShift: true });
+    }
+    {
+      const exprToken = appendNumericKey(state.inputBuffer, key);
+      if (exprToken !== null) return handled({ ...state, inputBuffer: exprToken });
+    }
     if (key === 'EXE') {
       if (!state.inputBuffer) return handled(state);
-      const val = parseFloat(state.inputBuffer);
-      if (!Number.isFinite(val)) return handled({ ...state, inputBuffer: '' });
+      const val = evalNumericInput(state.inputBuffer);
+      if (val === null) return handled({ ...state, inputBuffer: '' });
       if (state.dataType === '2-var' && state.inputField === 'y') {
         const data = [...state.data];
         data[data.length - 1] = { ...data[data.length - 1], y: val };

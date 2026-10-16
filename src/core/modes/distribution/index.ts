@@ -6,6 +6,7 @@ import {
   poissonCdf, poissonInv, poissonPdf,
 } from '../../../math/distribution';
 import { formatNumber } from '../../format';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 const DIST_TYPES: DistType[] = ['normal', 'binomial', 'poisson'];
 const DIST_FUNCS: DistFunc[] = ['pd', 'cd', 'inv'];
@@ -41,7 +42,7 @@ export function createDistributionState(): DistributionState {
 
 function computeResult(state: DistributionState, settings: CalculatorSettings): string {
   const labels = labelsFor(state);
-  const vals = labels.map((l) => parseFloat(state.params[l] ?? '0'));
+  const vals = labels.map((l) => evalNumericInput(state.params[l] ?? '0') ?? 0);
   try {
     switch (state.distType) {
       case 'normal': {
@@ -122,11 +123,6 @@ export function handleDistributionKey(
   key: KeyId,
   ctx: KeyContext,
 ): { state: DistributionState; result: ModeResult } {
-  const numKeys: Partial<Record<KeyId, string>> = {
-    ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
-    FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
-  };
-
   if (key === 'AC') return { state: createDistributionState(), result: { handled: true } };
 
   if (state.screen === 'type') {
@@ -171,15 +167,22 @@ export function handleDistributionKey(
     if (key === 'DEL') {
       return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
     }
-    if (numKeys[key]) {
-      return { state: { ...state, inputBuffer: state.inputBuffer + numKeys[key] }, result: { handled: true } };
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return { state: { ...state, inputBuffer: `${state.inputBuffer}e` }, result: { handled: true, consumeShift: true } };
     }
-    if (key === 'MINUS' && state.inputBuffer === '') {
-      return { state: { ...state, inputBuffer: '-' }, result: { handled: true } };
+    {
+      const exprToken = appendNumericKey(state.inputBuffer, key);
+      if (exprToken !== null) {
+        return { state: { ...state, inputBuffer: exprToken }, result: { handled: true } };
+      }
     }
     if (key === 'EXE') {
       const label = state.paramLabels[state.paramIndex];
-      const params = { ...state.params, [label]: state.inputBuffer || '0' };
+      const raw = state.inputBuffer || '0';
+      if (evalNumericInput(raw) === null) {
+        return { state: { ...state, inputBuffer: '' }, result: { handled: true } };
+      }
+      const params = { ...state.params, [label]: raw };
       if (state.paramIndex < state.paramLabels.length - 1) {
         return {
           state: { ...state, params, paramIndex: state.paramIndex + 1, inputBuffer: '' },

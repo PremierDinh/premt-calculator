@@ -69,6 +69,30 @@ function formatTick(v: number, step: number): string {
   return Number(v.toFixed(digits)).toString().replace('-', '−');
 }
 
+/** Approximate x-intercepts in the current view by sampling sign changes. */
+function findRoots(node: AstNode, view: View, ctx: EvalContext, samples = 400): number[] {
+  const roots: number[] = [];
+  const span = view.xMax - view.xMin;
+  if (!(span > 0)) return roots;
+  let prevX = view.xMin;
+  let prevY = sample(node, prevX, ctx);
+  for (let i = 1; i <= samples; i++) {
+    const x = view.xMin + (span * i) / samples;
+    const y = sample(node, x, ctx);
+    if (Number.isFinite(y) && Math.abs(y) < 1e-9) {
+      if (!roots.length || Math.abs(roots[roots.length - 1] - x) > span * 0.01) roots.push(x);
+    } else if (Number.isFinite(prevY) && Number.isFinite(y) && prevY * y < 0) {
+      // Linear interpolate the zero crossing.
+      const t = prevY / (prevY - y);
+      const root = prevX + t * (x - prevX);
+      if (!roots.length || Math.abs(roots[roots.length - 1] - root) > span * 0.01) roots.push(root);
+    }
+    prevX = x;
+    prevY = y;
+  }
+  return roots.slice(0, 24);
+}
+
 function fitY(nodes: (AstNode | null)[], view: View, ctx: EvalContext): View | null {
   const ys: number[] = [];
   for (const node of nodes) {
@@ -106,6 +130,7 @@ export function GraphTool({ language, seed }: { language: Language; seed?: strin
   });
   const [angle, setAngle] = useState<'rad' | 'deg'>('rad');
   const [piAxis, setPiAxis] = useState(false);
+  const [showRoots, setShowRoots] = useState(true);
   const [trace, setTrace] = useState<{ px: number; x: number } | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -217,6 +242,21 @@ export function GraphTool({ language, seed }: { language: Language; seed?: strin
         lastPy = py;
       }
       g.stroke();
+
+      if (showRoots) {
+        const roots = findRoots(f.node, view, ctx);
+        g.fillStyle = COLORS[idx % COLORS.length];
+        g.strokeStyle = '#ffffff';
+        g.lineWidth = 1.5;
+        for (const root of roots) {
+          const { px, py } = toPx(root, 0);
+          if (px < -4 || px > w + 4 || py < -4 || py > h + 4) continue;
+          g.beginPath();
+          g.arc(px, py, 4.5, 0, Math.PI * 2);
+          g.fill();
+          g.stroke();
+        }
+      }
     });
 
     if (trace) {
@@ -239,7 +279,7 @@ export function GraphTool({ language, seed }: { language: Language; seed?: strin
         g.fill();
       });
     }
-  }, [compiled, view, size, ctx, piAxis, trace, toPx, toX]);
+  }, [compiled, view, size, ctx, piAxis, showRoots, trace, toPx, toX]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -341,6 +381,9 @@ export function GraphTool({ language, seed }: { language: Language; seed?: strin
         </button>
         <button type="button" className={`toolChip ${piAxis ? 'toolChipOn' : ''}`} onClick={() => setPiAxis(!piAxis)}>
           {tr('Trục π', 'π axis')}
+        </button>
+        <button type="button" className={`toolChip ${showRoots ? 'toolChipOn' : ''}`} onClick={() => setShowRoots(!showRoots)}>
+          {tr('Nghiệm', 'Roots')}
         </button>
         <span className="toolSpacer" />
         {fns.length < MAX_FUNCS && (

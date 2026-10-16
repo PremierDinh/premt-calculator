@@ -18,6 +18,7 @@ import {
   primeFactorize,
 } from '../../core/tools/numberTheory';
 import { CALC_OPTIONS_1VAR, CALC_OPTIONS_2VAR, compute1Var, compute2Var } from '../../core/modes/statistics';
+import { evalNumericInput } from '../../core/numericInput';
 import { GraphTool } from './tools/GraphTool';
 import { SolveTool } from './tools/SolveTool';
 import { BaseTool, MatrixTool, TableTool } from './tools/MoreTools';
@@ -79,7 +80,13 @@ function HistoryTool({ tr }: { tr: Tr }) {
   const clearHistory = useCalculatorStore((s) => s.clearHistory);
   const after = useAfterAction();
   const [copied, setCopied] = useState(false);
-  const items = [...history].reverse();
+  const [query, setQuery] = useState('');
+  const items = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const all = [...history].reverse();
+    if (!q) return all;
+    return all.filter((h) => `${h.expression} ${h.result}`.toLowerCase().includes(q));
+  }, [history, query]);
 
   const copyAll = () => {
     const text = history.map((h) => `${h.expression} = ${h.result}`).join('\n');
@@ -100,7 +107,7 @@ function HistoryTool({ tr }: { tr: Tr }) {
     URL.revokeObjectURL(url);
   };
 
-  if (!items.length) {
+  if (!history.length) {
     return (
       <p className="toolEmpty">
         {tr('Chưa có phép tính nào. Bấm = trong chế độ Tính toán để lưu lịch sử.', 'No calculations yet. Press = in Calculate to record history.')}
@@ -110,16 +117,31 @@ function HistoryTool({ tr }: { tr: Tr }) {
 
   return (
     <div className="toolBody">
+      <input
+        className="toolInput"
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={tr('Tìm trong lịch sử…', 'Search history…')}
+        aria-label={tr('Tìm trong lịch sử', 'Search history')}
+      />
       <div className="toolRow">
-        <span className="toolMuted">{items.length} {tr('phép tính', 'entries')}</span>
+        <span className="toolMuted">
+          {query.trim()
+            ? `${items.length}/${history.length} ${tr('kết quả', 'matches')}`
+            : `${history.length} ${tr('phép tính', 'entries')}`}
+        </span>
         <span className="toolSpacer" />
         <button type="button" className="toolLink" onClick={copyAll}>{copied ? tr('Đã chép ✓', 'Copied ✓') : tr('Sao chép', 'Copy')}</button>
         <button type="button" className="toolLink" onClick={downloadCsv}>CSV</button>
         <button type="button" className="toolLink toolDanger" onClick={clearHistory}>{tr('Xóa hết', 'Clear')}</button>
       </div>
+      {!items.length ? (
+        <p className="toolEmpty">{tr('Không có kết quả khớp.', 'No matching entries.')}</p>
+      ) : null}
       <ul className="toolList">
         {items.map((item, i) => (
-          <li className="historyItem" key={`${history.length - i}`}>
+          <li className="historyItem" key={`${item.expression}-${item.result}-${i}`}>
             <div className="historyExpr"><NaturalLine text={toNaturalDisplay(item.expression)} /></div>
             <div className="historyResult">= {item.result}</div>
             <div className="toolRow">
@@ -149,8 +171,8 @@ function VariablesTool({ tr }: { tr: Tr }) {
 
   const commit = () => {
     if (!editing) return;
-    const value = Number(editing.text.replace(',', '.'));
-    if (editing.text.trim() && Number.isFinite(value)) setVariable(editing.name, value);
+    const value = evalNumericInput(editing.text);
+    if (value !== null) setVariable(editing.name, value);
     setEditing(null);
   };
 

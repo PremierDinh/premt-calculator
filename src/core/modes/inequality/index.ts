@@ -3,6 +3,7 @@ import type { InequalityKind } from '../../../math/equations';
 import { formatNumber, localizeNumber, shouldPreferFraction } from '../../format';
 import { exactQuadraticRoots } from '../../exactForm';
 import { prefersMathInput, type CalculatorSettings, type Language } from '../../settings';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 export function createInequalityState(): InequalityState {
   return {
@@ -110,10 +111,6 @@ export function handleInequalityKey(
   key: KeyId,
   ctx: KeyContext,
 ): { state: InequalityState; result: ModeResult } {
-  const nums: Partial<Record<KeyId, string>> = {
-    ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
-    FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
-  };
   if (key === 'AC') return { state: createInequalityState(), result: { handled: true } };
 
   if (state.screen === 'type') {
@@ -144,16 +141,22 @@ export function handleInequalityKey(
 
   if (state.screen === 'input') {
     if (key === 'DEL') return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
-    if (nums[key]) return { state: { ...state, inputBuffer: state.inputBuffer + nums[key] }, result: { handled: true } };
-    if (key === 'MINUS' && !state.inputBuffer) return { state: { ...state, inputBuffer: '-' }, result: { handled: true } };
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return { state: { ...state, inputBuffer: `${state.inputBuffer}e` }, result: { handled: true, consumeShift: true } };
+    }
+    const exprToken = appendNumericKey(state.inputBuffer, key);
+    if (exprToken !== null) return { state: { ...state, inputBuffer: exprToken }, result: { handled: true } };
     if (key === 'EXE') {
       const coefficients = [...state.coefficients];
-      coefficients[state.coeffIndex] = state.inputBuffer || '0';
+      if (!state.inputBuffer || evalNumericInput(state.inputBuffer) === null) {
+        return { state, result: { handled: true } };
+      }
+      coefficients[state.coeffIndex] = state.inputBuffer;
       const done = state.coeffIndex >= coefficients.length - 1;
       if (!done) {
         return { state: { ...state, coefficients, coeffIndex: state.coeffIndex + 1, inputBuffer: '' }, result: { handled: true } };
       }
-      const vals = coefficients.map((c) => parseFloat(c) || 0);
+      const vals = coefficients.map((c) => evalNumericInput(c) ?? 0);
       const resultText = state.ineqType === 'linear'
         ? solveLinear(vals[0], vals[1], state.kind, ctx.settings, ctx.language)
         : solveQuadratic(vals[0], vals[1], vals[2], state.kind, ctx.settings, ctx.language);

@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, prefersMathInput, type CalculatorSettings } from '../
 import { toNaturalDisplay } from '../../naturalDisplay';
 import { createEvalContext, evaluateFunction } from '../../../math/evaluator';
 import { formatNumber } from '../../format';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 export function createTableState(): TableState {
   return {
@@ -32,9 +33,9 @@ const MAX_TABLE_ROWS = 50;
 const VISIBLE_ROWS = 3;
 
 function generateTable(state: TableState, ctx: KeyContext): { x: number; fx: number }[] {
-  const start = parseFloat(state.start) || 0;
-  const end = parseFloat(state.end) || 0;
-  const step = parseFloat(state.step) || 1;
+  const start = evalNumericInput(state.start) ?? 0;
+  const end = evalNumericInput(state.end) ?? 0;
+  const step = evalNumericInput(state.step) ?? 1;
   const data: { x: number; fx: number }[] = [];
   const env = evalCtx(ctx);
 
@@ -160,16 +161,22 @@ export function handleTableKey(
     return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
   }
 
-  if (numKeys[key]) {
-    return { state: { ...state, inputBuffer: state.inputBuffer + numKeys[key] }, result: { handled: true } };
-  }
-
   if (alphaKeys[key] && state.screen === 'func') {
-    return { state: { ...state, inputBuffer: state.inputBuffer + alphaKeys[key] }, result: { handled: true } };
+    return { state: { ...state, inputBuffer: state.inputBuffer + alphaKeys[key]! }, result: { handled: true } };
   }
 
-  if (key === 'MINUS' && state.inputBuffer === '' && state.screen !== 'func') {
-    return { state: { ...state, inputBuffer: '-' }, result: { handled: true } };
+  if (state.screen !== 'func') {
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return { state: { ...state, inputBuffer: `${state.inputBuffer}e` }, result: { handled: true, consumeShift: true } };
+    }
+    const exprToken = appendNumericKey(state.inputBuffer, key);
+    if (exprToken !== null) return { state: { ...state, inputBuffer: exprToken }, result: { handled: true } };
+  } else if (numKeys[key]) {
+    return { state: { ...state, inputBuffer: state.inputBuffer + numKeys[key]! }, result: { handled: true } };
+  }
+
+  if (key === 'PI' && state.screen === 'func') {
+    return { state: { ...state, inputBuffer: `${state.inputBuffer}pi` }, result: { handled: true } };
   }
 
   if (key === 'EXE') {

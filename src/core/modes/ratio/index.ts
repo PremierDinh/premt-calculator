@@ -1,5 +1,6 @@
 import type { DisplayState, KeyContext, KeyId, ModeResult, RatioState } from '../../types';
 import { formatNumber } from '../../format';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 export function createRatioState(): RatioState {
   return { values: ['', '', '', ''], index: 0, inputBuffer: '', resultText: '', screen: 'input' };
@@ -23,24 +24,24 @@ export function handleRatioKey(
   key: KeyId,
   ctx: KeyContext,
 ): { state: RatioState; result: ModeResult } {
-  const nums: Partial<Record<KeyId, string>> = {
-    ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
-    FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
-  };
   if (key === 'AC') return { state: createRatioState(), result: { handled: true } };
   if (state.screen === 'input') {
     if (key === 'DEL') return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
-    if (nums[key]) return { state: { ...state, inputBuffer: state.inputBuffer + nums[key] }, result: { handled: true } };
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return { state: { ...state, inputBuffer: `${state.inputBuffer}e` }, result: { handled: true, consumeShift: true } };
+    }
+    const exprToken = appendNumericKey(state.inputBuffer, key);
+    if (exprToken !== null) return { state: { ...state, inputBuffer: exprToken }, result: { handled: true } };
     if (key === 'EXE') {
       const values = [...state.values] as RatioState['values'];
       values[state.index] = state.inputBuffer;
       if (state.index < 2) {
         return { state: { ...state, values, index: state.index + 1, inputBuffer: '' }, result: { handled: true } };
       }
-      const a = parseFloat(values[0]);
-      const b = parseFloat(values[1]);
-      const c = parseFloat(values[2]);
-      if (!Number.isFinite(a) || !Number.isFinite(b) || !Number.isFinite(c)) {
+      const a = evalNumericInput(values[0]);
+      const b = evalNumericInput(values[1]);
+      const c = evalNumericInput(values[2]);
+      if (a === null || b === null || c === null) {
         return { state: { ...state, values, screen: 'result', resultText: 'Math ERROR' }, result: { handled: true } };
       }
       if (a === 0) {

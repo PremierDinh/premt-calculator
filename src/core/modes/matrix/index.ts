@@ -2,6 +2,7 @@ import type { DisplayState, KeyContext, KeyId, MatrixAppState, ModeResult } from
 import { det, identity, inverse, matAdd, matMul, matSub, trace, transpose, type Matrix } from '../../../math/matrix';
 import { formatNumber } from '../../format';
 import { prefersMathInput } from '../../settings';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 type MatName = MatrixAppState['target'];
 type MatOp = MatrixAppState['op'];
@@ -123,10 +124,6 @@ export function handleMatrixKey(
   key: KeyId,
   ctx: KeyContext,
 ): { state: MatrixAppState; result: ModeResult } {
-  const nums: Partial<Record<KeyId, string>> = {
-    ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
-    FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
-  };
   if (key === 'AC') return { state: createMatrixState(), result: { handled: true } };
 
   if (state.screen === 'menu') {
@@ -156,8 +153,11 @@ export function handleMatrixKey(
 
   if (state.screen === 'edit') {
     if (key === 'DEL') return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
-    if (nums[key]) return { state: { ...state, inputBuffer: state.inputBuffer + nums[key] }, result: { handled: true } };
-    if (key === 'MINUS' && !state.inputBuffer) return { state: { ...state, inputBuffer: '-' }, result: { handled: true } };
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return { state: { ...state, inputBuffer: `${state.inputBuffer}e` }, result: { handled: true, consumeShift: true } };
+    }
+    const exprToken = appendNumericKey(state.inputBuffer, key);
+    if (exprToken !== null) return { state: { ...state, inputBuffer: exprToken }, result: { handled: true } };
     if (key === 'LEFT' || key === 'UP') {
       let r = state.editRow;
       let c = state.editCol - 1;
@@ -167,8 +167,8 @@ export function handleMatrixKey(
     }
     if (key === 'EXE' || key === 'RIGHT' || key === 'DOWN') {
       const m = (ctx.matrices[state.target] ?? identity(state.rows)).map((r) => [...r]);
-      const typed = parseFloat(state.inputBuffer);
-      if (state.inputBuffer && Number.isFinite(typed)) m[state.editRow][state.editCol] = typed;
+      const typed = evalNumericInput(state.inputBuffer);
+      if (typed !== null) m[state.editRow][state.editCol] = typed;
       let r = state.editRow;
       let c = state.editCol + 1;
       if (c >= state.cols) { c = 0; r++; }

@@ -2,6 +2,7 @@ import type { DisplayState, KeyContext, KeyId, ModeResult, VectorAppState } from
 import { cross, dot, norm, vecAdd, vecSub, type Vector } from '../../../math/vector';
 import { formatNumber, formatValue } from '../../format';
 import { prefersMathInput } from '../../settings';
+import { appendNumericKey, evalNumericInput } from '../../numericInput';
 
 type VecName = VectorAppState['target'];
 type VecOp = VectorAppState['op'];
@@ -113,10 +114,6 @@ export function handleVectorKey(
   key: KeyId,
   ctx: KeyContext,
 ): { state: VectorAppState; result: ModeResult } {
-  const nums: Partial<Record<KeyId, string>> = {
-    ZERO: '0', ONE: '1', TWO: '2', THREE: '3', FOUR: '4',
-    FIVE: '5', SIX: '6', SEVEN: '7', EIGHT: '8', NINE: '9', DOT: '.',
-  };
   if (key === 'AC') return { state: createVectorState(), result: { handled: true } };
 
   if (state.screen === 'menu') {
@@ -141,15 +138,18 @@ export function handleVectorKey(
   }
   if (state.screen === 'edit') {
     if (key === 'DEL') return { state: { ...state, inputBuffer: state.inputBuffer.slice(0, -1) }, result: { handled: true } };
-    if (nums[key]) return { state: { ...state, inputBuffer: state.inputBuffer + nums[key] }, result: { handled: true } };
-    if (key === 'MINUS' && !state.inputBuffer) return { state: { ...state, inputBuffer: '-' }, result: { handled: true } };
+    if (ctx.shiftActive && (key === 'PI' || key === 'EIGHT')) {
+      return { state: { ...state, inputBuffer: `${state.inputBuffer}e` }, result: { handled: true, consumeShift: true } };
+    }
+    const exprToken = appendNumericKey(state.inputBuffer, key);
+    if (exprToken !== null) return { state: { ...state, inputBuffer: exprToken }, result: { handled: true } };
     if (key === 'LEFT' || key === 'UP') {
       return { state: { ...state, editIndex: Math.max(0, state.editIndex - 1), inputBuffer: '' }, result: { handled: true } };
     }
     if (key === 'EXE' || key === 'RIGHT' || key === 'DOWN') {
       const data = [...(ctx.vectors[state.target] ?? Array(state.dim).fill(0))];
-      const typed = parseFloat(state.inputBuffer);
-      if (state.inputBuffer && Number.isFinite(typed)) data[state.editIndex] = typed;
+      const typed = evalNumericInput(state.inputBuffer);
+      if (typed !== null) data[state.editIndex] = typed;
       const next = state.editIndex + 1;
       return {
         state: {
